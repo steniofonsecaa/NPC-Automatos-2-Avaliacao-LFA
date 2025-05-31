@@ -18,8 +18,11 @@ class HUD:
         # Vidas como corações
         for i in range(vidas):
             HUD._draw_coracao(config.SCREEN_WIDTH - 10 - 10*i, 4, config.HEART_COLOR)
-        pyxel.text(config.SCREEN_WIDTH - 54, 4, "VIDAS:", config.HUD_LABEL_COLOR)
-        
+        # Calcula a posição adaptativa para o texto de vidas:
+        largura_texto = 6 * len("VIDAS:")   # cada letra ~6px
+        x_vidas = config.SCREEN_WIDTH - 10 - 10*vidas - largura_texto - 8  # 8 pixels de margem
+        pyxel.text(x_vidas, 4, "VIDAS:", config.HUD_LABEL_COLOR)
+                
         # Fase centralizada com borda
         # Fase centralizada com borda (no rodapé)
         fase_text = f"FASE {fase}"

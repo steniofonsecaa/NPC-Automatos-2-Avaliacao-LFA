@@ -137,16 +137,18 @@ class Game:
         if not self.ball.lancada and pyxel.btnp(pyxel.KEY_SPACE):
             self.ball.lancada = True
             self.exibir_instrucoes = False
-        # Lançamento da bola
-        if self.modo_jogador:
+
+        if not self.modo_jogador: #atualliza a lista de power-ups caindo
+            self.automato.powerups = self.powerups_caindo
+            movimento = self.automato.decidir_acao(self.score, self.lives)
+        else:
             movimento = 0
             if pyxel.btn(pyxel.KEY_LEFT):
                 movimento = -1
             elif pyxel.btn(pyxel.KEY_RIGHT):
                 movimento = 1
-        else:
-            movimento = self.automato.decidir_acao(self.score, self.lives)
         self.paddle.update(movimento)
+        # Lançamento da bola
 
         self.ball.update()
 
@@ -231,9 +233,6 @@ class Game:
         self.ball.draw()
         for pu in self.powerups_caindo:
             pu.draw()
-        self.powerups_ativos = [
-                                 PowerUpAtivo(pu.obj, pu.frames - 1) for pu in self.powerups_ativos if pu.frames > 1
-                                ]   
         HUD.draw(
             score=self.score,
             vidas=self.lives,
