@@ -5,9 +5,13 @@ from ball import Ball
 from block import Block
 from hud import HUD
 import random
-from automato import AutomatoIA, AutomatoAFN
+from automato import AutomatoAFD, AutomatoAFN
 from collections import namedtuple
-PowerUpAtivo = namedtuple("PowerUpAtivo", ["obj", "frames"])
+# ---- NOVO: Classe PowerUpAtivo ----# Classe mutável para PowerUp ativo na HUD
+class PowerUpAtivo:
+    def __init__(self, obj, frames):
+        self.obj = obj
+        self.frames = frames
 # ---- NOVO: Classe PowerUp ----
 class PowerUp:
     def __init__(self, x, y, tipo):
@@ -104,7 +108,7 @@ class Game:
         if self.afn_mode:
             self.automato = AutomatoAFN(self.paddle, self.ball, self.blocks)
         else:
-            self.automato = AutomatoIA(self.paddle, self.ball, self.blocks)
+            self.automato = AutomatoAFD(self.paddle, self.ball, self.blocks)
 
     def update(self):
         if pyxel.btnp(pyxel.KEY_TAB):
@@ -153,7 +157,15 @@ class Game:
                 self.aplicar_powerup(pu.tipo)
                 pu.coletado = True
 
-        self.powerups_caindo = [p for p in self.powerups_caindo if not p.coletado and p.y < config.SCREEN_HEIGHT]
+        self.powerups_caindo = [
+        p for p in self.powerups_caindo if not p.coletado and p.y < config.SCREEN_HEIGHT
+        ]
+        # Atualiza power-ups ativos
+        for pu in self.powerups_ativos:
+            pu.frames -= 1
+        self.powerups_ativos = [
+            pu for pu in self.powerups_ativos if pu.frames > 0
+        ]
 
         # Colisões e blocos
         self.ball.check_collisions(self.paddle, self.blocks)

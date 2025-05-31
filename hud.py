@@ -18,7 +18,7 @@ class HUD:
         # Vidas como corações
         for i in range(vidas):
             HUD._draw_coracao(config.SCREEN_WIDTH - 10 - 10*i, 4, config.HEART_COLOR)
-        pyxel.text(config.SCREEN_WIDTH - 58, 4, "VIDAS:", config.HUD_LABEL_COLOR)
+        pyxel.text(config.SCREEN_WIDTH - 54, 4, "VIDAS:", config.HUD_LABEL_COLOR)
         
         # Fase centralizada com borda
         # Fase centralizada com borda (no rodapé)
