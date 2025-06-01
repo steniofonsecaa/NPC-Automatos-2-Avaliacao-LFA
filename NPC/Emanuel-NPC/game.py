@@ -1,6 +1,25 @@
 import pyxel
 import NpcMercante
+import NpcFerreiro
+import random
 
+def converter_afn_para_dialogo(estados, transicoes, mensagens_customizadas):
+    afn_dict = {}
+
+    for estado in estados:
+        afn_dict[estado] = {
+            "message": mensagens_customizadas.get(estado, f"Você está no estado {estado}."),
+            "options": {},
+            "transitions": {},
+        }
+
+    for (origem, entrada), destinos in transicoes.items():
+        # Gera a chave de opção (1, 2, 3...)
+        option_key = str(len(afn_dict[origem]["options"]) + 1)
+        afn_dict[origem]["options"][option_key] = entrada
+        afn_dict[origem]["transitions"][option_key] = destinos  # Mantém como lista de estados!
+
+    return afn_dict
 def converter_afd_para_dialogo(estados, transicoes, mensagens_customizadas):
     automato = {}
     for estado in estados:
@@ -25,7 +44,11 @@ NPC_AUTOMATONS = {
         NpcMercante.transicoes,
         NpcMercante.mensagens
     ),
-    # "forge": converter_afd_para_dialogo(NpcGuarda.estados, NpcGuarda.transicoes, NpcGuarda.mensagens_customizadas),
+        NpcFerreiro.tipo: converter_afn_para_dialogo(
+        NpcFerreiro.estados,
+        NpcFerreiro.transicoes,
+        NpcFerreiro.mensagens_customizadas
+    ),
     # "info": ...
 }
 # Definindo o autômato de diálogo do NPC mercante
@@ -109,6 +132,12 @@ class NPC:
         if self.type == "shop":
             npc_nome = NpcMercante.nome
             pyxel.text(self.x, self.y - 8, npc_nome, 7)
+        elif self.type == "forge":
+            npc_nome = NpcFerreiro.nome
+            pyxel.text(self.x, self.y - 8, npc_nome, 7)
+        elif self.type == "info":
+            npc_nome = "Informante"
+            pyxel.text(self.x, self.y - 8, npc_nome, 7)
 
     def get_tile_pos(self):
         return self.x // TILE_SIZE, self.y // TILE_SIZE
@@ -121,6 +150,7 @@ class NPC:
         self.dialogue_state = list(self.automaton.keys())[0]  # Pega o primeiro estado do AFD
         self._update_dialogue_content()
         return True
+
     def _update_dialogue_content(self):
         if not self.is_dialogue_active or not self.dialogue_state or not self.automaton:
             return
@@ -148,16 +178,19 @@ class NPC:
 
         state_info = self.automaton.get(self.dialogue_state)
         if not state_info or choice_key not in state_info["transitions"]:
-            return # Escolha inválida para o estado atual
+            return
 
-        self.dialogue_state = state_info["transitions"][choice_key]
-        self._update_dialogue_content()
+        possiveis_estados = state_info["transitions"][choice_key]
+        if isinstance(possiveis_estados, list):
+            import random
+            self.dialogue_state = random.choice(possiveis_estados)
+        else:
+            self.dialogue_state = possiveis_estados
 
-        if self.dialogue_state == "END":
-            # O Game vai verificar isso para desativar o modo de diálogo.
-            # A mensagem de "END" será exibida, e na próxima interação o diálogo recomeça.
-            # Ou podemos fazer com que end_dialogue() seja chamado externamente.
-            pass
+        self.dialogue_message = self.automaton[self.dialogue_state]["message"]
+        self.dialogue_options_display = [
+            f"[{k}] {v}" for k, v in self.automaton[self.dialogue_state]["options"].items()
+        ]
 
     def end_dialogue(self):
         self.is_dialogue_active = False
@@ -216,13 +249,11 @@ class Game:
                     break
             
             if current_near_npc and pyxel.btnp(pyxel.KEY_E):
-                if current_near_npc.type == "shop": # Apenas o shop usa o novo sistema por enquanto
-                    self.active_npc_interaction = current_near_npc
-                    self.active_npc_interaction.start_dialogue()
+                self.active_npc_interaction = current_near_npc
+                if self.active_npc_interaction.start_dialogue():
+                    print(f"Iniciando diálogo com {self.get_npc_name(current_near_npc)}.")
                 else:
-                    # Lógica antiga para outros NPCs (se houver)
-                    # self.message = f"Falando com {self.get_npc_name(current_near_npc)} (simples)"
-                    print(f"Interagindo com {self.get_npc_name(current_near_npc)} (ainda sem automato complexo)")
+                    print(f"Interagindo com {self.get_npc_name(current_near_npc)} (sem diálogo complexo).")
 
 
             # Limpar diálogo se o jogador se afastar e não estiver em modo de interação
