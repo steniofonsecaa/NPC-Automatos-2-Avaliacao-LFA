@@ -1,16 +1,15 @@
 # npc_rpg/core/game.py
 import pyxel
 from .config import SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, MAP_DATA, COLOR_WALL, COLOR_FLOOR, COLOR_GOLD_TEXT, COLOR_INVENTORY_TEXT, COLOR_DIALOG_BG, COLOR_DIALOG_BORDER
-from .map_utils import is_near # is_blocked é usado pelo Player
+from .map_utils import is_near
 from entidades.player import Player
 
-COLOR_BLACK = 0  # Adiciona definição para preto (Pyxel: 0)
-COLOR_WHITE = 7  # Adiciona definição para branco (Pyxel: 7)
-# Importe as classes de NPC específicas
+COLOR_BLACK = 0 
+COLOR_WHITE = 7  
+
 from entidades.npc_vendedor import NPCVendedor
-from entidades.npc_informante import NPCInformante # Exemplo
-# from entities.npc_ferreiro import NPCFerreiro # Exemplo
-from entidades.npc_base import NPCBase  # Adiciona importação do NPCBase
+from entidades.npc_informante import NPCInformante 
+from entidades.npc_base import NPCBase
 
 class Game:
     def __init__(self):
@@ -133,10 +132,6 @@ class Game:
         return "NPC"
 
     def draw(self):
-        # ... (seu método draw permanece o mesmo, ele já lida com exibir
-        # a UI de diálogo se self.active_npc_interaction estiver definido e ativo,
-        # ou a UI da mochila se self.show_inventory_ui for true,
-        # ou a mensagem de interação se nenhuma das UIs estiver ativa mas perto de um NPC) ...
         pyxel.cls(COLOR_BLACK)
         
         for row_idx, row_val in enumerate(MAP_DATA):
@@ -147,8 +142,6 @@ class Game:
                 pyxel.rect(x, y, TILE_SIZE, TILE_SIZE, color)
 
         for npc_entity in self.npcs:
-            # if hasattr(npc_entity, 'is_visible') and not npc_entity.is_visible:
-            #    continue # Não desenha NPCs invisíveis
             npc_entity.draw()
 
         self.player.draw()
@@ -173,33 +166,86 @@ class Game:
             pyxel.text(box_x + 5, box_y + box_h - 10, "[M] Fechar", COLOR_INVENTORY_TEXT)
 
         elif self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
+            # --- UI DE DIÁLOGO DO NPC (MODIFICADO PARA CENTRALIZAR) ---
             npc = self.active_npc_interaction
-            dialog_box_h = 38
-            dialog_box_y = SCREEN_HEIGHT - dialog_box_h - 5
             
-            pyxel.rect(5, dialog_box_y, SCREEN_WIDTH - 10, dialog_box_h, COLOR_DIALOG_BG)
-            pyxel.rectb(5, dialog_box_y, SCREEN_WIDTH - 10, dialog_box_h, COLOR_DIALOG_BORDER)
+            # Define dimensões e posição da caixa de diálogo centralizada
+            dialog_box_w = SCREEN_WIDTH - 40 # Largura (ex: tela - 20 pixels de cada lado)
+            # Altura pode ser baseada no conteúdo ou fixa. Vamos usar uma altura fixa maior.
+            num_options = len(npc.dialogue_options_display)
+            # Altura base: 2 linhas para mensagem + espaço para cada opção + preenchimento
+            dialog_box_h = 20 + (num_options * 10) + 10 
+            if npc.dialogue_message.count('\n') > 0: # Se a mensagem tiver quebras de linha (não temos auto-wrap ainda)
+                 dialog_box_h += (npc.dialogue_message.count('\n')) * 8 # Adiciona espaço para mais linhas de mensagem
+
+            dialog_box_h = max(dialog_box_h, 50) # Altura mínima
+            dialog_box_h = min(dialog_box_h, SCREEN_HEIGHT - 40) # Altura máxima para não sair da tela
+
+
+            dialog_box_x = (SCREEN_WIDTH - dialog_box_w) // 2
+            dialog_box_y = (SCREEN_HEIGHT - dialog_box_h) // 2
             
-            max_chars_per_line = (SCREEN_WIDTH - 20) // pyxel.FONT_WIDTH
-            msg_line1 = npc.dialogue_message[:max_chars_per_line]
-            msg_line2 = npc.dialogue_message[max_chars_per_line:] if len(npc.dialogue_message) > max_chars_per_line else ""
+            # Desenha a caixa de diálogo
+            pyxel.rect(dialog_box_x, dialog_box_y, dialog_box_w, dialog_box_h, COLOR_DIALOG_BG)
+            pyxel.rectb(dialog_box_x, dialog_box_y, dialog_box_w, dialog_box_h, COLOR_DIALOG_BORDER)
+            
+            # Desenha a mensagem do NPC
+            # (Ainda usando a quebra de linha simples. Para um wrap melhor, seria mais complexo)
+            padding = 5 # Espaçamento interno da caixa
+            text_x = dialog_box_x + padding
+            text_y_start = dialog_box_y + padding
+            
+            # Simples quebra de linha manual para a mensagem do NPC
+            # Você pode querer uma função mais robusta para quebrar linhas longas automaticamente
+            # baseada na largura da dialog_box_w.
+            # Por agora, vamos assumir que as mensagens do autômato são curtas ou você pode
+            # adicionar '\n' manualmente nelas se precisar de múltiplas linhas.
+            
+            # Tentativa de quebra de linha simples (melhorar depois se necessário)
+            current_y = text_y_start
+            lines = npc.dialogue_message.split('\n') # Se já tivermos quebras manuais
+            if len(lines) == 1 and len(npc.dialogue_message) * pyxel.FONT_WIDTH > dialog_box_w - padding*2 : # Tenta quebrar se for uma linha longa
+                # Lógica de quebra de linha muito básica (apenas exemplo, pode não ser ideal)
+                words = npc.dialogue_message.split(' ')
+                line1_words = []
+                current_line_len = 0
+                for word in words:
+                    if current_line_len + len(word)*pyxel.FONT_WIDTH + pyxel.FONT_WIDTH > dialog_box_w - padding*2:
+                        break
+                    line1_words.append(word)
+                    current_line_len += len(word)*pyxel.FONT_WIDTH + pyxel.FONT_WIDTH
+                
+                msg_line1 = " ".join(line1_words)
+                remaining_words = words[len(line1_words):]
+                msg_line2 = " ".join(remaining_words) if remaining_words else ""
 
-            pyxel.text(10, dialog_box_y + 4, msg_line1, COLOR_INVENTORY_TEXT)
-            if msg_line2:
-                pyxel.text(10, dialog_box_y + 4 + 8, msg_line2, COLOR_INVENTORY_TEXT)
-
-            opt_y_start = dialog_box_y + 16 + (8 if msg_line2 else 0)
+                pyxel.text(text_x, current_y, msg_line1, COLOR_INVENTORY_TEXT)
+                current_y += 8 # Espaço para próxima linha
+                if msg_line2:
+                    pyxel.text(text_x, current_y, msg_line2[:(dialog_box_w - padding*2)//pyxel.FONT_WIDTH], COLOR_INVENTORY_TEXT) # Corta a segunda linha se muito longa
+                    current_y += 8 
+            else: # Se já tem \n ou é curta
+                for line in lines:
+                    pyxel.text(text_x, current_y, line, COLOR_INVENTORY_TEXT)
+                    current_y += 8 # Espaço entre linhas da mensagem
+            
+            # Desenha as opções do jogador
+            opt_y_start = current_y + 4 # Adiciona um pequeno espaço após a mensagem do NPC
             for i, opt_text in enumerate(npc.dialogue_options_display):
-                pyxel.text(10, opt_y_start + (i * 8), opt_text, COLOR_INVENTORY_TEXT)
-        else:
+                pyxel.text(text_x, opt_y_start + (i * 10), opt_text, COLOR_INVENTORY_TEXT) # Aumentei o espaçamento entre opções para 10
+
+        else: # Modo de Exploração - Mostrar "[E] Interagir"
             temp_near_npc = None
             for npc_entity in self.npcs:
-                # if hasattr(npc_entity, 'is_interactive') and not npc_entity.is_interactive:
-                #    continue
                 if is_near(self.player, npc_entity, distance=TILE_SIZE * 1.5):
                     temp_near_npc = npc_entity
                     break
             if temp_near_npc:
                 interact_msg = f"[E] Interagir com {self.get_npc_display_name(temp_near_npc)}"
-                pyxel.text(6, SCREEN_HEIGHT - 14, interact_msg, COLOR_BLACK)
-                pyxel.text(5, SCREEN_HEIGHT - 15, interact_msg, COLOR_WHITE)
+                # Calcula a largura da mensagem para centralizar ou alinhar
+                msg_width = len(interact_msg) * pyxel.FONT_WIDTH
+                prompt_x = (SCREEN_WIDTH - msg_width) // 2 # Centraliza a mensagem de interação
+                prompt_y = SCREEN_HEIGHT - 15
+
+                pyxel.text(prompt_x + 1, prompt_y + 1, interact_msg, COLOR_BLACK) # Sombra
+                pyxel.text(prompt_x, prompt_y, interact_msg, COLOR_WHITE)

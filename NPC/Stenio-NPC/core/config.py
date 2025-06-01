@@ -1,6 +1,6 @@
 # npc_rpg/core/config.py
-SCREEN_WIDTH = 160
-SCREEN_HEIGHT = 160
+SCREEN_WIDTH = 300
+SCREEN_HEIGHT = 240
 TILE_SIZE = 8
 
 # Cores (exemplo, você pode adicionar mais)
@@ -33,11 +33,13 @@ ITEM_DATA = {
     # Adicione mais itens aqui se o vendedor for comercializá-los
 }
 
-# 0 = chão, 1 = muro
-MAP_DATA = [ 
-    [1]*20,
+MAP_COLS = 38 
+MAP_ROWS = 30 
+
+MAP_DATA = [
+    [1]*MAP_COLS, # Linha superior de muros
 ] + [
-    [1] + [0]*18 + [1] for _ in range(18)
+    [1] + [0]*(MAP_COLS - 2) + [1] for _ in range(MAP_ROWS - 2) # Linhas do meio com chão e muros laterais
 ] + [
-    [1]*20,
+    [1]*MAP_COLS, # Linha inferior de muros
 ]

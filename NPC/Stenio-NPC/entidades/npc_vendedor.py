@@ -46,6 +46,7 @@ class NPCVendedor(NPCBase):
         self.chance_recusar_venda_aleatoria = 0.1 
         self.chance_conceder_desconto_persuasao = 0.6 
         self.chance_npc_fugir_ameaca = 0.4
+        self._message_is_final_from_handler = False
 
     def handle_ameaca(self):
         # ... (código do handle_ameaca) ...
@@ -103,41 +104,35 @@ class NPCVendedor(NPCBase):
         current_state_info = self.automaton.get(self.dialogue_state)
         item_key = current_state_info.get("item_key")
         preco_final = current_state_info.get("preco_final")
-
-        # Guarda o item_key para _update_dialogue_content usar na formatação da msg do próximo estado
-        self._context_item_key = item_key 
+        self._message_is_final_from_handler = True # Mensagem será definitiva
 
         if not item_key or preco_final is None or not self.player_in_dialogue:
-            print(f"DEBUG: Erro em handle_tentativa_compra para estado '{self.dialogue_state}'. Dados incompletos.")
-            # Define uma mensagem de erro direta e vai para um estado seguro
-            self.dialogue_message = "Algo deu errado com minha loja!" # Mensagem direta
+            self.dialogue_message = "Algo deu errado com minha loja!"
             self.dialogue_state = "INICIAL" 
-            self._context_item_key = None # Limpa o contexto se houve erro
             self._update_dialogue_content()
             return
 
         item_config = ITEM_DATA.get(item_key)
         if not item_config:
-            print(f"DEBUG: Item '{item_key}' não encontrado em ITEM_DATA durante handle_tentativa_compra.")
-            self.dialogue_message = "Não reconheço esse item..." # Mensagem direta
+            self.dialogue_message = "Não reconheço esse item..."
             self.dialogue_state = "INICIAL"
-            self._context_item_key = None # Limpa o contexto
             self._update_dialogue_content()
             return
         
-        # item_nome_exibicao = item_config.get("nome_exibicao", item_key) # Não precisa mais aqui
+        item_nome_exibicao = item_config.get("nome_exibicao", item_key)
 
         if self.player_in_dialogue.gold >= preco_final:
-            if hasattr(self, 'chance_recusar_venda_aleatoria') and random.random() < self.chance_recusar_venda_aleatoria:
+            if hasattr(self, 'chance_recusar_venda_aleatoria') and \
+               random.random() < self.chance_recusar_venda_aleatoria:
                 self.dialogue_state = "RECUSANDO_VENDA_ALEATORIA"
-                # A mensagem será formatada por _update_dialogue_content usando self._context_item_key
-            else:
+                self.dialogue_message = f"Hmm... Quer saber? Hoje não estou a fim de vender esta {item_nome_exibicao} para você."
+            else: 
                 self.player_in_dialogue.gold -= preco_final
                 self.player_in_dialogue.inventory[item_key] = self.player_in_dialogue.inventory.get(item_key, 0) + 1
                 self.dialogue_state = "COMPRA_SUCESSO"
-                # A mensagem será formatada por _update_dialogue_content
-        else:
+                self.dialogue_message = f"Negócio fechado! {item_nome_exibicao} ({preco_final}g) é seu. Ouro: {self.player_in_dialogue.gold}"
+        else: 
             self.dialogue_state = "SEM_OURO"
-            # A mensagem será formatada por _update_dialogue_content
+            self.dialogue_message = f"Ah, que pena. Você precisa de {preco_final}g para {item_nome_exibicao}, mas só tem {self.player_in_dialogue.gold}g."
 
         self._update_dialogue_content()

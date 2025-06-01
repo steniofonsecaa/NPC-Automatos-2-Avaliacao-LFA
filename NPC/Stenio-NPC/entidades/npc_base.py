@@ -46,6 +46,7 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
 
     def _update_dialogue_content(self):
         if not self.is_dialogue_active or not self.dialogue_state or not self.automaton:
+            # ... (código de limpeza como antes) ...
             self.dialogue_message = ""
             self.dialogue_options_display = []
             if not self.automaton and self.is_dialogue_active:
@@ -55,72 +56,71 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
 
         state_info = self.automaton.get(self.dialogue_state)
         if not state_info:
+            # ... (código de erro como antes) ...
             print(f"DEBUG: Estado de dialogo '{self.dialogue_state}' invalido para NPC {self.type} ({self.label}). Encerrando.")
             self.end_dialogue()
             return
 
-        # 1. Formatar a mensagem do estado
-        raw_message = state_info.get("message", "...")
-        
-        # Tenta pegar item_key do estado; se não houver, usa o _context_item_key (se existir)
-        item_key_para_formatacao = state_info.get("item_key")
-        if not item_key_para_formatacao and hasattr(self, '_context_item_key'):
-            item_key_para_formatacao = self._context_item_key
-        
-        formatted_message = raw_message
-        if "{item_nome}" in raw_message or \
-           "{preco_base}" in raw_message or \
-           "{preco_desconto}" in raw_message:
+        # 1. Lidar com a mensagem do estado
+        # Se uma mensagem final já foi definida por um handler, não a sobrescreva com o template.
+        if not self._message_is_final_from_handler:
+            raw_message = state_info.get("message", "...")
+            item_key_para_formatacao = state_info.get("item_key")
+            # (Não precisamos mais de _context_item_key com esta abordagem de flag)
             
-            if item_key_para_formatacao and item_key_para_formatacao in ITEM_DATA:
-                item_config = ITEM_DATA[item_key_para_formatacao]
-                try:
-                    formatted_message = raw_message.format(
-                        item_nome=item_config.get("nome_exibicao", item_key_para_formatacao),
-                        preco_base=item_config.get("preco_base", "N/A"),
-                        preco_desconto=item_config.get("preco_desconto", "N/A")
-                    )
-                except KeyError as e:
-                    print(f"DEBUG: Erro ao formatar mensagem para estado '{self.dialogue_state}'. Placeholder ausente: {e}")
-            else:
-                # Só imprime o DEBUG se a mensagem realmente precisava de formatação e não conseguiu
-                if "{item_nome}" in raw_message or "{preco_base}" in raw_message or "{preco_desconto}" in raw_message:
-                    print(f"DEBUG: Estado '{self.dialogue_state}' tem mensagem formatavel mas falta item_key ou item_key='{item_key_para_formatacao}' é inválido.")
-        
-        self.dialogue_message = formatted_message
-
-        # Limpa a chave de contexto depois de usada para que não afete o próximo estado independentemente.
-        if hasattr(self, '_context_item_key'):
-            del self._context_item_key
-
-        # 2. Montar as opções para o jogador (lógica de formatação de opções como antes)
-        self.dialogue_options_display = []
-        current_player_options = state_info.get("options", {})
-        for key, text_option_raw in current_player_options.items():
-            text_option_formatted = text_option_raw
-            # Reutiliza item_key_para_formatacao para as opções também
-            if item_key_para_formatacao and item_key_para_formatacao in ITEM_DATA:
-                if "{item_nome}" in text_option_raw or \
-                   "{preco_base}" in text_option_raw or \
-                   "{preco_desconto}" in text_option_raw:
+            formatted_message = raw_message
+            if "{item_nome}" in raw_message or \
+               "{preco_base}" in raw_message or \
+               "{preco_desconto}" in raw_message:
+                
+                if item_key_para_formatacao and item_key_para_formatacao in ITEM_DATA:
                     item_config = ITEM_DATA[item_key_para_formatacao]
                     try:
-                        text_option_formatted = text_option_raw.format(
+                        formatted_message = raw_message.format(
                             item_nome=item_config.get("nome_exibicao", item_key_para_formatacao),
                             preco_base=item_config.get("preco_base", "N/A"),
                             preco_desconto=item_config.get("preco_desconto", "N/A")
+                            # Adicione outros placeholders que seus templates possam usar
                         )
-                    except KeyError:
-                        pass 
+                    except KeyError as e:
+                        print(f"DEBUG: Erro ao formatar mensagem (template) para estado '{self.dialogue_state}'. Placeholder ausente: {e}")
+                else:
+                    if "{item_nome}" in raw_message or "{preco_base}" in raw_message or "{preco_desconto}" in raw_message:
+                        print(f"DEBUG: Estado '{self.dialogue_state}' (template) tem msg formatavel mas falta item_key ou item_key='{item_key_para_formatacao}' é inválido.")
+            
+            self.dialogue_message = formatted_message
+        else:
+            # A mensagem já foi definida pelo handler, apenas resete a flag para a próxima vez.
+            self._message_is_final_from_handler = False
+
+        # 2. Montar as opções para o jogador (como antes)
+        self.dialogue_options_display = []
+        current_player_options = state_info.get("options", {})
+        # (Reutilize item_key_para_formatacao se as opções também precisarem de formatação)
+        item_key_para_opcoes = state_info.get("item_key") # Ou use o item_key_para_formatacao se já calculado
+        for key, text_option_raw in current_player_options.items():
+            text_option_formatted = text_option_raw
+            if item_key_para_opcoes and item_key_para_opcoes in ITEM_DATA:
+                 if "{item_nome}" in text_option_raw or \
+                   "{preco_base}" in text_option_raw or \
+                   "{preco_desconto}" in text_option_raw:
+                    item_config = ITEM_DATA[item_key_para_opcoes]
+                    try:
+                        text_option_formatted = text_option_raw.format(
+                            item_nome=item_config.get("nome_exibicao", item_key_para_opcoes),
+                            preco_base=item_config.get("preco_base", "N/A"),
+                            preco_desconto=item_config.get("preco_desconto", "N/A")
+                        )
+                    except KeyError: pass 
             self.dialogue_options_display.append(f"[{key}] {text_option_formatted}")
         
-        # 3. Chamar 'action_handler' se o estado for de processamento automático
+        # 3. Chamar 'action_handler' se o estado for de processamento automático (como antes)
         action_handler_name = state_info.get("action_handler")
         if action_handler_name and not current_player_options: 
             if hasattr(self, action_handler_name):
                 getattr(self, action_handler_name)() 
             else:
-                print(f"AVISO CRÍTICO: Action handler '{action_handler_name}' definido para '{self.dialogue_state}' mas o método NÃO existe em {self.__class__.__name__}!")
+                print(f"AVISO CRÍTICO: Action handler '{action_handler_name}' definido para '{self.dialogue_state}' mas método NÃO existe em {self.__class__.__name__}!")
                 self.dialogue_state = "INICIAL" 
                 self._update_dialogue_content()
 
