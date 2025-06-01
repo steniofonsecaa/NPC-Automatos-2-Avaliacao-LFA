@@ -70,33 +70,43 @@ def gerar_diagrama_afn():
 
     # AFN: Transições não determinísticas (com múltiplos destinos possíveis)
     transicoes = [
+        # Início
         ('EsperandoLançamento', 'RastreandoBolaLenta', 'bola_lançada'),
-        ('EsperandoLançamento', 'ColetandoPowerUp', 'powerup&&!perigo'),
+        # Prioridade powerup (se visível e não perigoso)
+        ('EsperandoLançamento', 'ColetandoPowerUp', 'powerup_visível && !perigo'),
+        # Bola lenta <-> rápida
         ('RastreandoBolaLenta', 'RastreandoBolaRapida', 'bola_rápida'),
-        ('RastreandoBolaLenta', 'ColetandoPowerUp', 'powerup'),
-        ('RastreandoBolaLenta', 'Pânico', 'random() < 0.1'),
+        ('RastreandoBolaRapida', 'RastreandoBolaLenta', 'bola_lenta'),
+        # Microajuste perto do paddle
+        ('RastreandoBolaLenta', 'AjustandoFino', 'bola_perto_paddle'),
         ('RastreandoBolaRapida', 'AjustandoFino', 'bola_perto_paddle'),
-        ('RastreandoBolaRapida', 'ColetandoPowerUp', 'powerup && random() < 0.2'),
-        ('ColetandoPowerUp', 'RastreandoBolaLenta', 'powerup_coletado'),
+        # Microajuste terminado
         ('AjustandoFino', 'RastreandoBolaLenta', 'ajuste_feito'),
+        # Desviar bloco
+        ('RastreandoBolaLenta', 'DesviandoDeBloco', 'bloco_acima'),
         ('DesviandoDeBloco', 'RastreandoBolaLenta', 'bloco_livre'),
+        # Power-up visível e seguro
+        ('RastreandoBolaLenta', 'ColetandoPowerUp', 'powerup_visível && !perigo'),
+        ('RastreandoBolaRapida', 'ColetandoPowerUp', 'powerup_visível && !perigo'),
+        # Power-up coletado volta ao rastreamento
+        ('ColetandoPowerUp', 'RastreandoBolaLenta', 'powerup_coletado'),
+        # Estado de pânico (vidas==1 ou múltiplos powerups simultâneos)
+        ('RastreandoBolaLenta', 'Pânico', 'vidas==1 || multi_powerups'),
+        ('RastreandoBolaRapida', 'Pânico', 'vidas==1 || multi_powerups'),
+        ('ColetandoPowerUp', 'Pânico', 'multi_powerups'),
+        # Pânico pode normalizar (vidas>1 && len(powerups)<=1)
+        ('Pânico', 'RastreandoBolaLenta', 'vidas>1 && powerups<=1'),
+        # Bola perdida ou vidas zeradas em qualquer estado relevante
         ('RastreandoBolaLenta', 'GameOver', 'perdeu_vida || vidas==0'),
-        ('RastreandoBolaLenta', 'Pânico', 'perdeu_vida && random() < 0.2'),
-        ('ColetandoPowerUp', 'GameOver', 'vidas==0'),
-        ('ColetandoPowerUp', 'RastreandoBolaLenta', 'random() < 0.7'),
+        ('RastreandoBolaRapida', 'GameOver', 'perdeu_vida || vidas==0'),
+        ('RecuperandoCentro', 'GameOver', 'perdeu_vida || vidas==0'),
+        ('ColetandoPowerUp', 'GameOver', 'perdeu_vida || vidas==0'),
         ('Pânico', 'GameOver', 'vidas==0'),
-        ('RecuperandoCentro', 'GameOver', 'vidas==0'),
-        ('Pânico', 'RastreandoBolaLenta', 'normaliza'),
+        # Recuperando centro
+        ('RastreandoBolaLenta', 'RecuperandoCentro', 'bola_afasta'),
         ('RecuperandoCentro', 'RastreandoBolaLenta', 'centralizou'),
+        # Reinício
         ('GameOver', 'EsperandoLançamento', 'reiniciar'),
-        ('RastreandoBolaLenta', 'Pânico', 'vidas==1'),
-        ('RastreandoBolaLenta', 'Pânico', 'random()<0.08'),          # 8% de chance de pânico espontâneo
-        ('ColetandoPowerUp', 'Pânico', 'len(powerups)>1'),
-        ('RastreandoBolaRapida', 'Pânico', 'vidas==1'),
-        ('AjustandoFino', 'Pânico', 'random()<0.04'),                # hesitação súbita
-        # ---- Pânico pode voltar para vários estados ----
-        ('Pânico', 'RastreandoBolaLenta', 'vidas>1 && random()<0.7'), # 70% das vezes volta ao rastreamento
-        ('Pânico', 'ColetandoPowerUp', 'len(powerups)>0 && random()<0.3'), # 30% tenta coletar powerup mesmo em pânico
     ]
 
     for origem, destino, evento in transicoes:
