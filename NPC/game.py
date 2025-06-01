@@ -5,32 +5,32 @@ SCREEN_HEIGHT = 160
 TILE_SIZE = 8
 
 SHOP_NPC_AUTOMATON = {
-    "INITIAL": {
+    "INICIAL": {
         "message": "Ola! Bem-vindo. Deseja:",
         "options": {"1": "Comprar", "2": "Vender", "3": "Sair"},
-        "transitions": {"1": "BUY_MENU", "2": "SELL_MENU", "3": "END"}
+        "transitions": {"1": "MENU_COMPRA", "2": "MENU_VENDA", "3": "FIM"}
     },
-    "BUY_MENU": {
+    "MENU_COMPRA": {
         "message": "Comprar: [1] Pocao (10g), [2] Espada (50g), [3] Voltar.",
         "options": {"1": "Poção", "2": "Espada", "3": "Voltar"},
-        "transitions": {"1": "BOUGHT_POTION", "2": "BOUGHT_SWORD", "3": "INITIAL"}
+        "transitions": {"1": "POCAO_COMPRADA", "2": "ESPADA_COMPRADA", "3": "INICIAL"}
     },
-    "SELL_MENU": {
+    "MENU_VENDA": {
         "message": "Vender ainda nao implementado. [1] Voltar.",
         "options": {"1": "Voltar"},
-        "transitions": {"1": "INITIAL"}
+        "transitions": {"1": "INICIAL"}
     },
-    "BOUGHT_POTION": {
+    "POCAO_COMPRADA": {
         "message": "Voce comprou uma Pocao! (10g). [1] Continuar.",
         "options": {"1": "Continuar"},
-        "transitions": {"1": "BUY_MENU"} # Volta para o menu de compra
+        "transitions": {"1": "MENU_COMPRA"} # Volta para o menu de compra
     },
-    "BOUGHT_SWORD": {
+    "ESPADA_COMPRADA": {
         "message": "Voce comprou uma Espada! (50g). [1] Continuar.",
         "options": {"1": "Continuar"},
-        "transitions": {"1": "BUY_MENU"} # Volta para o menu de compra
+        "transitions": {"1": "MENU_COMPRA"} # Volta para o menu de compra
     },
-    "END": {
+    "FIM": {
         "message": "Ate logo!",
         "options": {}, # Sem opções, finaliza o diálogo
         "transitions": {}
@@ -123,7 +123,7 @@ class NPC:
             return False # Não há autômato definido para este NPC
         
         self.is_dialogue_active = True
-        self.dialogue_state = "INITIAL" # Estado inicial do autômato
+        self.dialogue_state = "INICIAL" # Estado inicial do autômato
         self._update_dialogue_content()
         return True
 
@@ -144,7 +144,7 @@ class NPC:
         if not state_info["options"]: # Se não há opções, é um estado final de fala
             # Poderia ter uma lógica para auto-avançar ou esperar um "continuar" genérico
             # Por enquanto, se não há opções, o jogador precisará sair manualmente ou o estado precisa transitar para END
-            if self.dialogue_state == "END": # Se chegou ao estado END, o diálogo efetivamente acabou.
+            if self.dialogue_state == "FIM": # Se chegou ao estado END, o diálogo efetivamente acabou.
                  pass # A flag is_dialogue_active será controlada pelo Game para realmente sair.
 
 
@@ -159,7 +159,7 @@ class NPC:
         self.dialogue_state = state_info["transitions"][choice_key]
         self._update_dialogue_content()
 
-        if self.dialogue_state == "END":
+        if self.dialogue_state == "FIM":
             # O Game vai verificar isso para desativar o modo de diálogo.
             # A mensagem de "END" será exibida, e na próxima interação o diálogo recomeça.
             # Ou podemos fazer com que end_dialogue() seja chamado externamente.
@@ -201,7 +201,7 @@ class Game:
             # Adicione mais teclas se suas opções usarem (ex: 4, 5...)
 
             # Se o diálogo do NPC chegou ao estado final "END"
-            if self.active_npc_interaction.dialogue_state == "END":
+            if self.active_npc_interaction.dialogue_state == "FIM":
                  # Damos um pequeno tempo para ler a msg de despedida, ou podemos ter um btn p/ fechar
                  # Por agora, se apertar uma tecla de opção novamente (ou uma tecla 'sair' dedicada) ele sai
                  # Vamos simplificar: se o estado é END e alguma tecla de opção é pressionada, sai
