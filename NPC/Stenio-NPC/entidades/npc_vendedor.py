@@ -6,39 +6,6 @@ from core.config import ITEM_DATA # Importa os dados dos itens
 
 class NPCVendedor(NPCBase):
     def __init__(self, x, y, label="L"):
-        super().__init__(x, y, npc_type="shop", label=label, color=COLOR_SHOP_NPC)
-        self.automaton = SHOP_NPC_AUTOMATON # Atribui o autômato específico do vendedor
-
-        # Atributos para controlar o comportamento dinâmico do vendedor
-        self.chance_recusar_venda_aleatoria = 0.1 # 10% de chance de simplesmente não querer vender o item
-        self.chance_conceder_desconto_persuasao = 0.6 # 60% de chance de dar desconto se o jogador persuadir
-        self.chance_npc_fugir_ameaca = 0.4 # 40% de chance do NPC fugir se ameaçado
-        #self.chance_ameaca_falhar_e_npc_irritar = 0.6 # 60% (do restante) chance do NPC se irritar se a ameaça não o fizer fugir
-        
-        # Você pode adicionar mais atributos aqui, como um pequeno "humor" que pode
-        # influenciar essas chances ou os preços, mas vamos manter simples por enquanto.
-
-    # ... (outros métodos do NPCVendedor, como os action_handlers, virão aqui depois) ...
-    def handle_ameaca(self):
-        """Lógica para processar a ameaça do jogador."""
-        # print("DEBUG: NPCVendedor - Entrou em handle_ameaca")
-        if random.random() < self.chance_npc_fugir_ameaca:
-            self.dialogue_state = "FUGINDO"
-            # Aqui você poderia adicionar lógica de jogo mais complexa, como:
-            # - Marcar o NPC como "fugiu" para que ele desapareça do mapa.
-            # - Impedir interações futuras por um tempo.
-        else:
-            # Se não fugiu, ele se irrita e expulsa o jogador.
-            self.dialogue_state = "AMEACA_FRACASSADA"
-        
-        self._update_dialogue_content() # Atualiza a UI para o novo estado ("FUGINDO" ou "AMEACA_FRACASSADA")
-
-    # npc_rpg/entities/npc_vendedor.py
-# ... (imports e __init__ como antes) ...
-# from core.config import ITEM_DATA # Certifique-se que ITEM_DATA está acessível se precisar de detalhes do item aqui
-
-class NPCVendedor(NPCBase):
-    def __init__(self, x, y, label="L"):
         # ... (seu __init__ existente com as chances) ...
         super().__init__(x, y, npc_type="shop", label=label, color=COLOR_SHOP_NPC)
         self.automaton = SHOP_NPC_AUTOMATON
@@ -47,6 +14,8 @@ class NPCVendedor(NPCBase):
         self.chance_conceder_desconto_persuasao = 0.6 
         self.chance_npc_fugir_ameaca = 0.4
         self._message_is_final_from_handler = False
+
+        self._temp_sell_option_map = {}
 
     def handle_ameaca(self):
         # ... (código do handle_ameaca) ...
@@ -135,4 +104,59 @@ class NPCVendedor(NPCBase):
             self.dialogue_state = "SEM_OURO"
             self.dialogue_message = f"Ah, que pena. Você precisa de {preco_final}g para {item_nome_exibicao}, mas só tem {self.player_in_dialogue.gold}g."
 
-        self._update_dialogue_content()
+    def generate_sell_options_for_player(self):
+        """
+        Gera dinamicamente as opções de venda para o jogador com base no seu inventário
+        e nos itens que o NPC compra.
+        Este método POPULA self.dialogue_options_display e self._temp_sell_option_map.
+        Ele NÃO deve chamar _update_dialogue_content().
+        """
+        # print("DEBUG: NPCVendedor - Entrou em generate_sell_options_for_player")
+        self.dialogue_options_display = [] # Limpa para novas opções
+        self._temp_sell_option_map = {}    # Limpa o mapa temporário
+        
+        if not self.player_in_dialogue:
+            # Se não houver referência ao jogador, apenas preenche com a opção de voltar do autômato
+            current_state_info = self.automaton.get(self.dialogue_state, {})
+            fixed_options = current_state_info.get("options", {})
+            for key, text in fixed_options.items():
+                self.dialogue_options_display.append(f"[{key}] {text}")
+            return
+
+        sellable_items_count = 0
+        # Iterar sobre os itens que o jogador PODE vender (madeira, ferro, tecido, pocao)
+        # Ou iterar sobre ITEM_DATA e checar se o jogador tem e se o NPC compra
+        
+        # Vamos usar uma lista predefinida de itens que o jogador PODE tentar vender,
+        # para garantir a ordem e quais itens são considerados.
+        potential_sell_items = ["madeira", "ferro", "tecido", "pocao"] 
+
+        for item_key in potential_sell_items:
+            if item_key in self.player_in_dialogue.inventory and \
+               self.player_in_dialogue.inventory[item_key] > 0:
+                
+                item_details_config = ITEM_DATA.get(item_key, {})
+                npc_buy_price = item_details_config.get("preco_npc_paga_jogador")
+
+                if npc_buy_price and npc_buy_price > 0: # NPC compra este item
+                    sellable_items_count += 1
+                    option_key_str = str(sellable_items_count)
+                    item_name_display = item_details_config.get("nome_exibicao", item_key)
+                    player_quantity = self.player_in_dialogue.inventory[item_key]
+                    
+                    option_text = f"{item_name_display} (Você tem: {player_quantity}) - Vender por {npc_buy_price}g"
+                    self.dialogue_options_display.append(f"[{option_key_str}] {option_text}")
+                    self._temp_sell_option_map[option_key_str] = item_key
+        
+        if sellable_items_count == 0:
+            self.dialogue_options_display.append("(Você não tem nada que eu queira comprar agora.)")
+        
+        # Adiciona a opção fixa de voltar (definida no autômato para MENU_VENDA_ESCOLHER_ITEM)
+        current_state_info = self.automaton.get(self.dialogue_state, {}) # Pega info do estado atual
+        fixed_options = current_state_info.get("options", {}) # Pega as opções fixas (ex: {"9": "[Voltar...]"})
+        for key, text in fixed_options.items():
+            # Adiciona apenas se a chave numérica não colidir com as dinâmicas (improvável se usar '9')
+            if key not in self._temp_sell_option_map: 
+                self.dialogue_options_display.append(f"[{key}] {text}")
+
+        #self._update_dialogue_content()

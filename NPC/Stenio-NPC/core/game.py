@@ -16,13 +16,12 @@ TARGET_GAME_FPS = 60
 
 class Game:
     def __init__(self):
-        # Use TARGET_GAME_FPS na inicialização do Pyxel
-        pyxel.init(SCREEN_WIDTH, SCREEN_HEIGHT, title="Meu RPG com NPCs", fps=TARGET_GAME_FPS) 
+        pyxel.init(SCREEN_WIDTH, SCREEN_HEIGHT, title="RPG com NPC's", fps=TARGET_GAME_FPS) 
         
         self.player = Player(start_x=SCREEN_WIDTH // 2, start_y=SCREEN_HEIGHT // 2)
         self.npcs = [
             NPCVendedor(TILE_SIZE * 3, TILE_SIZE * 3),
-            NPCInformante(SCREEN_WIDTH - TILE_SIZE * 4, TILE_SIZE * 3, label="I"), # Ajuste a cor se necessário
+            NPCInformante(SCREEN_WIDTH - TILE_SIZE * 4, TILE_SIZE * 3, label="I"), 
             NPCBase(TILE_SIZE * 3, SCREEN_HEIGHT - TILE_SIZE * 4, npc_type="forge", label="F", color=10) 
         ]
         
@@ -31,7 +30,6 @@ class Game:
 
         self.dialogue_end_timer_start_frame = None
         self.DIALOGUE_AUTOCLOSE_DELAY_SECONDS = 2
-        # Use TARGET_GAME_FPS para calcular os frames
         self.dialogue_autoclose_delay_frames = self.DIALOGUE_AUTOCLOSE_DELAY_SECONDS * TARGET_GAME_FPS
         
         pyxel.run(self.update, self.draw)
@@ -44,7 +42,7 @@ class Game:
                 # Se abrir o inventário durante um diálogo, encerra o diálogo e o timer
                 self.active_npc_interaction.end_dialogue()
                 self.active_npc_interaction = None
-                self.dialogue_end_timer_start_frame = None # Reseta o timer
+                self.dialogue_end_timer_start_frame = None
 
         if self.show_inventory_ui:
             return 
@@ -88,8 +86,7 @@ class Game:
 
                     if should_npc_disappear:
                         print(f"DEBUG: NPC {npc.label if hasattr(npc, 'label') else 'Desconhecido'} auto-desapareceu após timer.")
-                        # TODO: Lógica para NPC desaparecer (ex: self.npcs.remove(npc) ou npc.is_active = False)
-                # else: Mensagem final está sendo exibida, aguardando timer expirar.
+                        # TODO: 
             
             elif player_made_choice_this_frame:
                 # Se o jogador fez uma escolha que NÃO levou a um estado final,
@@ -174,7 +171,6 @@ class Game:
             pyxel.text(box_x + 5, box_y + box_h - 10, "[M] Fechar", COLOR_INVENTORY_TEXT)
 
         elif self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
-            # --- UI DE DIÁLOGO DO NPC (MODIFICADO PARA CENTRALIZAR) ---
             npc = self.active_npc_interaction
             
             # Define dimensões e posição da caixa de diálogo centralizada
@@ -202,13 +198,7 @@ class Game:
             padding = 5 # Espaçamento interno da caixa
             text_x = dialog_box_x + padding
             text_y_start = dialog_box_y + padding
-            
-            # Simples quebra de linha manual para a mensagem do NPC
-            # Você pode querer uma função mais robusta para quebrar linhas longas automaticamente
-            # baseada na largura da dialog_box_w.
-            # Por agora, vamos assumir que as mensagens do autômato são curtas ou você pode
-            # adicionar '\n' manualmente nelas se precisar de múltiplas linhas.
-            
+
             # Tentativa de quebra de linha simples (melhorar depois se necessário)
             current_y = text_y_start
             lines = npc.dialogue_message.split('\n') # Se já tivermos quebras manuais

@@ -18,19 +18,11 @@ COLOR_GOLD_TEXT = 7
 COLOR_INVENTORY_TEXT = 7
 
 ITEM_DATA = {
-    "pocao": {
-        "nome_exibicao": "Poção de Cura", 
-        "preco_base": 10, 
-        "preco_desconto": 8,
-        "tipo": "consumivel" # Você pode usar 'tipo' para outras lógicas no futuro
-    },
-    "espada": {
-        "nome_exibicao": "Espada Curta", 
-        "preco_base": 50, 
-        "preco_desconto": 45, # Exemplo de preço com desconto para a espada
-        "tipo": "equipamento"
-    },
-    # Adicione mais itens aqui se o vendedor for comercializá-los
+    "pocao":  {"nome_exibicao": "Poção de Cura",    "preco_base": 10, "preco_desconto": 8,  "preco_venda_jogador_paga_npc": 10, "preco_npc_paga_jogador": 4, "tipo": "consumivel"},
+    "espada": {"nome_exibicao": "Espada Curta",   "preco_base": 50, "preco_desconto": 45, "preco_venda_jogador_paga_npc": 50, "tipo": "equipamento"}, # NPC pode não comprar espadas
+    "madeira":{"nome_exibicao": "Madeira",                                                 "preco_npc_paga_jogador": 10, "tipo": "material"},
+    "ferro":  {"nome_exibicao": "Ferro",                                                   "preco_npc_paga_jogador": 15, "tipo": "material"},
+    "tecido": {"nome_exibicao": "Tecido",                                                  "preco_npc_paga_jogador": 5, "tipo": "material"},
 }
 
 MAP_COLS = 38 
