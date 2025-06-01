@@ -112,7 +112,7 @@ SHOP_NPC_AUTOMATON = {
 
     # --- ESTADOS FINAIS DE DIÁLOGO ---
     "FIM_DIALOGO": { # Jogador escolheu sair ou uma ação levou ao fim
-        "message": "Até mais, aventureiro! E cuidado por aí.",
+        "message": "Até mais, aventureiro! E cuidado por ai.",
         "options": {}, # Sem opções, o Game.py encerrará o modo de diálogo
         "transitions": {}
     },
