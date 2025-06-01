@@ -17,6 +17,21 @@ COLOR_DIALOG_BORDER = 7
 COLOR_GOLD_TEXT = 7
 COLOR_INVENTORY_TEXT = 7
 
+ITEM_DATA = {
+    "pocao": {
+        "nome_exibicao": "Poção de Cura", 
+        "preco_base": 10, 
+        "preco_desconto": 8,
+        "tipo": "consumivel" # Você pode usar 'tipo' para outras lógicas no futuro
+    },
+    "espada": {
+        "nome_exibicao": "Espada Curta", 
+        "preco_base": 50, 
+        "preco_desconto": 45, # Exemplo de preço com desconto para a espada
+        "tipo": "equipamento"
+    },
+    # Adicione mais itens aqui se o vendedor for comercializá-los
+}
 
 # 0 = chão, 1 = muro
 MAP_DATA = [ 

@@ -33,75 +33,112 @@ class Game:
     def update(self):
         if pyxel.btnp(pyxel.KEY_M):
             self.show_inventory_ui = not self.show_inventory_ui
-            # Se abriu o inventário, e estava em diálogo, encerra o diálogo
             if self.show_inventory_ui and self.active_npc_interaction:
                 self.active_npc_interaction.end_dialogue()
                 self.active_npc_interaction = None
-
 
         if self.show_inventory_ui:
             return 
 
         if self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
-            # Modo de Diálogo
-            npc = self.active_npc_interaction
-            if pyxel.btnp(pyxel.KEY_1):
-                npc.process_player_choice("1")
-            elif pyxel.btnp(pyxel.KEY_2):
-                npc.process_player_choice("2")
-            elif pyxel.btnp(pyxel.KEY_3):
-                npc.process_player_choice("3")
-            # Adicione mais teclas se necessário (4, 5, etc.)
+            # --- MODO DE DIÁLOGO ATIVO ---
+            npc = self.active_npc_interaction # Alias para facilitar
 
-            # Verifica se o diálogo terminou (chegou ao estado "FIM")
-            if npc.dialogue_state == "FIM":
-                # Permite fechar a janela de diálogo final pressionando uma tecla de ação
-                if pyxel.btnp(pyxel.KEY_1) or pyxel.btnp(pyxel.KEY_2) or pyxel.btnp(pyxel.KEY_3) or pyxel.btnp(pyxel.KEY_E) or pyxel.btnp(pyxel.KEY_Q):
-                    npc.end_dialogue()
-                    self.active_npc_interaction = None
-        else:
-            # Modo de Exploração
-            # Passa as posições em PIXELS dos NPCs para a checagem de colisão do jogador
-            blocked_npc_pixel_positions = [npc.get_pixel_pos() for npc in self.npcs]
+            # 1. Processar escolhas do jogador se o estado atual tiver opções
+            # (Os estados FIM_DIALOGO e FIM_DIALOGO_NPC_AUSENTE não terão opções,
+            # então as teclas 1,2,3 não farão transições a partir deles via process_player_choice)
+            if npc.automaton.get(npc.dialogue_state, {}).get("options"): # Verifica se o estado ATUAL tem opções
+                if pyxel.btnp(pyxel.KEY_1):
+                    npc.process_player_choice("1")
+                elif pyxel.btnp(pyxel.KEY_2):
+                    npc.process_player_choice("2")
+                elif pyxel.btnp(pyxel.KEY_3):
+                    npc.process_player_choice("3")
+                # Adicione mais elif para KEY_4, KEY_5 etc., se seu autômato usar.
+            
+            # 2. Verificar se o diálogo deve terminar (após uma escolha ou se o estado é terminal)
+            # O estado pode ter mudado devido à process_player_choice ou a um action_handler.
+            # Os action_handlers já chamam _update_dialogue_content, então npc.dialogue_state está atualizado.
+            
+            # Se o estado atual do NPC é um dos estados finais de diálogo
+            if npc.dialogue_state == "FIM_DIALOGO" or \
+               npc.dialogue_state == "FIM_DIALOGO_NPC_AUSENTE":
+                
+                # O NPC exibirá sua mensagem final (configurada por _update_dialogue_content).
+                # Esperamos que o jogador pressione uma tecla para dispensar/fechar esta mensagem.
+                # Usaremos 'E' (interagir), 'Q' (comum para sair/cancelar), Espaço, ou '1' (genérico)
+                if pyxel.btnp(pyxel.KEY_E) or pyxel.btnp(pyxel.KEY_Q) or \
+                   pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.KEY_1): # Tecla '1' como um "ok" genérico
+
+                    should_npc_disappear = (npc.dialogue_state == "FIM_DIALOGO_NPC_AUSENTE")
+                    
+                    npc.end_dialogue()  # Limpa o estado de diálogo interno do NPC
+                    self.active_npc_interaction = None  # Sai do modo de diálogo no jogo
+
+                    if should_npc_disappear:
+                        # TODO: Implementar a lógica para o NPC realmente desaparecer ou se tornar não interativo.
+                        # Por enquanto, apenas um print para indicar a ação.
+                        # Se for remover da lista self.npcs, cuidado com iterações sobre ela.
+                        # Uma abordagem mais segura é marcar o NPC: npc.is_active = False
+                        print(f"DEBUG: NPC {npc.label if hasattr(npc, 'label') else 'Desconhecido'} deveria desaparecer/ficar inativo.")
+                        # Exemplo de como você poderia marcar o NPC (requer adicionar 'is_interactive' à classe NPC):
+                        # if hasattr(npc, 'is_interactive'):
+                        # npc.is_interactive = False
+            
+            # Se por algum motivo o diálogo se tornou inativo dentro do NPC, mas o Game ainda acha que está ativo
+            elif not npc.is_dialogue_active and self.active_npc_interaction:
+                 print(f"DEBUG: Diálogo com NPC {npc.label} tornou-se inativo internamente. Encerrando no Game.")
+                 self.active_npc_interaction = None
+
+
+        else: # --- MODO DE EXPLORAÇÃO ---
+            # ... (seu código de modo de exploração: player.update, checar proximidade com NPCs, iniciar diálogo com 'E') ...
+            # Certifique-se que a parte de iniciar diálogo (com 'E') esteja aqui.
+            blocked_npc_pixel_positions = [n.get_pixel_pos() for n in self.npcs] # Usando n para evitar conflito com npc acima
             self.player.update(blocked_npc_pixel_positions)
 
-            # Verifica interação com NPCs
             current_near_npc = None
             for npc_entity in self.npcs:
-                if is_near(self.player, npc_entity, distance=TILE_SIZE * 1.5): # Aumenta um pouco a distância
+                # if hasattr(npc_entity, 'is_interactive') and not npc_entity.is_interactive:
+                # continue # Pula NPCs que não estão interativos (ex: fugiram)
+                if is_near(self.player, npc_entity, distance=TILE_SIZE * 1.5):
                     current_near_npc = npc_entity
                     break
             
             if current_near_npc and pyxel.btnp(pyxel.KEY_E):
-                # Inicia o diálogo se o NPC tiver um autômato, ou faz uma ação padrão
+                # if hasattr(current_near_npc, 'is_interactive') and not current_near_npc.is_interactive:
+                #    pass # Não interage se o NPC estiver marcado como não interativo
+                # else:
                 self.active_npc_interaction = current_near_npc
                 if not self.active_npc_interaction.start_dialogue(self.player):
-                    # Se start_dialogue falhar (ex: sem autômato), limpa a interação
                     print(f"NPC {current_near_npc.type} ({current_near_npc.label}) nao iniciou dialogo complexo.")
-                    # Poderia ter uma msg padrão aqui
                     self.active_npc_interaction = None 
             
-            # Lógica para sair do "foco" do NPC se o jogador se afastar e não estiver em diálogo ativo
-            # (Esta lógica pode ser complexa e precisa de cuidado para não interromper diálogos indesejadamente)
-            # Se active_npc_interaction existe, mas não está mais próximo e não está em diálogo ativo, limpa.
+            # Limpar foco do NPC se o jogador se afastar (apenas se não estiver em diálogo ativo)
             if self.active_npc_interaction and \
-               not self.active_npc_interaction.is_dialogue_active and \
-               not is_near(self.player, self.active_npc_interaction, distance=TILE_SIZE * 1.5):
-                 self.active_npc_interaction = None
+               (not hasattr(self.active_npc_interaction, 'is_dialogue_active') or \
+                not self.active_npc_interaction.is_dialogue_active) and \
+               not is_near(self.player, self.active_npc_interaction, distance=TILE_SIZE * 1.5): # Aumenta a distância para "desfocar"
+                self.active_npc_interaction = None
 
 
-    def get_npc_display_name(self, npc): # Renomeado para evitar confusão
-        # Mapeia o tipo do NPC para um nome mais amigável
-        if isinstance(npc, NPCVendedor): return "Vendedor"
-        if isinstance(npc, NPCInformante): return "Informante"
-        # if isinstance(npc, NPCFerreiro): return "Ferreiro"
-        if npc.type == "forge": return "Ferreiro" # Fallback para tipo
+    # ... (get_npc_display_name e draw como antes) ...
+    def get_npc_display_name(self, npc_obj): # Renomeado parâmetro para evitar conflito
+        if isinstance(npc_obj, NPCVendedor): return "Vendedor" # Certifique-se que NPCVendedor está importado
+        # Adicione isinstance para outros tipos de NPC específicos
+        # from entities.npc_vendedor import NPCVendedor # No topo de game.py
+        if hasattr(npc_obj, 'type'): # Fallback para tipo genérico
+            if npc_obj.type == "info": return "Informante"
+            if npc_obj.type == "forge": return "Ferreiro"
         return "NPC"
 
     def draw(self):
+        # ... (seu método draw permanece o mesmo, ele já lida com exibir
+        # a UI de diálogo se self.active_npc_interaction estiver definido e ativo,
+        # ou a UI da mochila se self.show_inventory_ui for true,
+        # ou a mensagem de interação se nenhuma das UIs estiver ativa mas perto de um NPC) ...
         pyxel.cls(COLOR_BLACK)
         
-        # Desenha o mapa
         for row_idx, row_val in enumerate(MAP_DATA):
             for col_idx, tile_val in enumerate(row_val):
                 x = col_idx * TILE_SIZE
@@ -109,19 +146,16 @@ class Game:
                 color = COLOR_WALL if tile_val == 1 else COLOR_FLOOR
                 pyxel.rect(x, y, TILE_SIZE, TILE_SIZE, color)
 
-        # Desenha NPCs
         for npc_entity in self.npcs:
+            # if hasattr(npc_entity, 'is_visible') and not npc_entity.is_visible:
+            #    continue # Não desenha NPCs invisíveis
             npc_entity.draw()
 
-        # Desenha Player
         self.player.draw()
 
-        # Exibe Ouro do Jogador
         gold_text = f"Ouro: {self.player.gold}"
-        # Desenha texto com sombra simples para melhor legibilidade
         pyxel.text(SCREEN_WIDTH - len(gold_text) * pyxel.FONT_WIDTH - 6, 6, gold_text, COLOR_BLACK)
         pyxel.text(SCREEN_WIDTH - len(gold_text) * pyxel.FONT_WIDTH - 5, 5, gold_text, COLOR_GOLD_TEXT)
-
 
         if self.show_inventory_ui:
             box_w, box_h = 120, 100
@@ -141,33 +175,31 @@ class Game:
         elif self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
             npc = self.active_npc_interaction
             dialog_box_h = 38
-            dialog_box_y = SCREEN_HEIGHT - dialog_box_h - 5 # Posição da caixa de diálogo
+            dialog_box_y = SCREEN_HEIGHT - dialog_box_h - 5
             
             pyxel.rect(5, dialog_box_y, SCREEN_WIDTH - 10, dialog_box_h, COLOR_DIALOG_BG)
             pyxel.rectb(5, dialog_box_y, SCREEN_WIDTH - 10, dialog_box_h, COLOR_DIALOG_BORDER)
             
-            # Quebra de linha simples para mensagem do NPC (rudimentar)
-            # Para mensagens mais longas, você precisaria de uma função de quebra de linha mais robusta.
             max_chars_per_line = (SCREEN_WIDTH - 20) // pyxel.FONT_WIDTH
             msg_line1 = npc.dialogue_message[:max_chars_per_line]
             msg_line2 = npc.dialogue_message[max_chars_per_line:] if len(npc.dialogue_message) > max_chars_per_line else ""
 
             pyxel.text(10, dialog_box_y + 4, msg_line1, COLOR_INVENTORY_TEXT)
             if msg_line2:
-                 pyxel.text(10, dialog_box_y + 4 + 8, msg_line2, COLOR_INVENTORY_TEXT)
+                pyxel.text(10, dialog_box_y + 4 + 8, msg_line2, COLOR_INVENTORY_TEXT)
 
-            opt_y_start = dialog_box_y + 16 + (8 if msg_line2 else 0) # Ajusta Y das opções se msg tem 2 linhas
+            opt_y_start = dialog_box_y + 16 + (8 if msg_line2 else 0)
             for i, opt_text in enumerate(npc.dialogue_options_display):
                 pyxel.text(10, opt_y_start + (i * 8), opt_text, COLOR_INVENTORY_TEXT)
         else:
-            # Mostra "Pressione E para interagir"
             temp_near_npc = None
             for npc_entity in self.npcs:
+                # if hasattr(npc_entity, 'is_interactive') and not npc_entity.is_interactive:
+                #    continue
                 if is_near(self.player, npc_entity, distance=TILE_SIZE * 1.5):
                     temp_near_npc = npc_entity
                     break
             if temp_near_npc:
-                # Sombra para o texto de interação
                 interact_msg = f"[E] Interagir com {self.get_npc_display_name(temp_near_npc)}"
                 pyxel.text(6, SCREEN_HEIGHT - 14, interact_msg, COLOR_BLACK)
                 pyxel.text(5, SCREEN_HEIGHT - 15, interact_msg, COLOR_WHITE)
