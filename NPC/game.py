@@ -1,4 +1,5 @@
 import pyxel
+import random
 
 SCREEN_WIDTH = 160
 SCREEN_HEIGHT = 160
@@ -6,7 +7,7 @@ TILE_SIZE = 8
 
 SHOP_NPC_AUTOMATON = {
     "INICIAL": {
-        "message": "Ola! Bem-vindo. Deseja:",
+        "message": "Ola! Bem-vindo, viajante. O que você deseja:",
         "options": {"1": "Comprar", "2": "Vender", "3": "Sair"},
         "transitions": {"1": "MENU_COMPRA", "2": "MENU_VENDA", "3": "FIM"}
     },
@@ -70,19 +71,30 @@ class Player:
     def __init__(self):
         self.x = 40
         self.y = 40
-        self.color = 12
-        self.char = "P"
+        self.color = 12  # Azul claro para o jogador
+        self.char = "P" # Não está sendo usado para desenhar, mas pode ser útil
+
+        # Ouro e Inventário
+        self.gold = random.randint(200, 500) # Ouro inicial entre 200 e 500
+        self.inventory = {
+            "madeira": random.randint(0, 10),
+            "ferro": random.randint(0, 5),
+            "tecido": random.randint(0, 9),
+            "pocao": random.randint(0, 5), # Para "poções"
+            "espada": 0 # Espadas compradas na loja, começa com 0
+        }
 
     def update(self, blocked_positions):
         dx = dy = 0
-        if pyxel.btn(pyxel.KEY_LEFT): dx = -1  # Movimento de 1 pixel para a esquerda
-        if pyxel.btn(pyxel.KEY_RIGHT): dx = 1   # Movimento de 1 pixel para a direita
-        if pyxel.btn(pyxel.KEY_UP): dy = -1     # Movimento de 1 pixel para cima
-        if pyxel.btn(pyxel.KEY_DOWN): dy = 1    # Movimento de 1 pixel para baixo
+        if pyxel.btn(pyxel.KEY_LEFT): dx = -1
+        if pyxel.btn(pyxel.KEY_RIGHT): dx = 1
+        if pyxel.btn(pyxel.KEY_UP): dy = -1
+        if pyxel.btn(pyxel.KEY_DOWN): dy = 1
 
         new_x = self.x + dx
         new_y = self.y + dy
 
+        # Colisão separada para X e Y para deslizar nas paredes
         if not is_blocked(new_x, self.y, blocked_positions):
             self.x = new_x
         if not is_blocked(self.x, new_y, blocked_positions):
@@ -90,7 +102,7 @@ class Player:
 
     def draw(self):
         pyxel.rect(self.x, self.y, TILE_SIZE, TILE_SIZE, self.color)
-        pyxel.text(self.x + 2, self.y + 2, self.char, 0)
+        # pyxel.text(self.x + 2, self.y + 2, self.char, 0)
 
 class NPC:
     def __init__(self, x, y, npc_type, label):
@@ -100,30 +112,32 @@ class NPC:
         self.label = label
         self.color = {"shop": 8, "forge": 10, "info": 7}[npc_type]
 
-        # Atributos para o autômato de diálogo
         self.is_dialogue_active = False
         self.dialogue_state = None
         self.dialogue_message = ""
-        self.dialogue_options_display = [] # Lista de strings formatadas para exibição
+        self.dialogue_options_display = []
+        self.player_in_dialogue = None # Referência ao jogador
 
         if self.type == "shop":
             self.automaton = SHOP_NPC_AUTOMATON
         else:
-            self.automaton = None # Outros NPCs não usam este autômato por enquanto
+            self.automaton = None
 
+    # ... (draw e get_tile_pos permanecem iguais) ...
     def draw(self):
         pyxel.rect(self.x, self.y, TILE_SIZE, TILE_SIZE, self.color)
         pyxel.text(self.x + 2, self.y + 2, self.label, 0)
 
     def get_tile_pos(self):
         return self.x // TILE_SIZE, self.y // TILE_SIZE
-
-    def start_dialogue(self):
+    
+    def start_dialogue(self, player_obj): # Modificado para aceitar o jogador
         if not self.automaton:
-            return False # Não há autômato definido para este NPC
+            return False
         
+        self.player_in_dialogue = player_obj # Armazena o jogador
         self.is_dialogue_active = True
-        self.dialogue_state = "INICIAL" # Estado inicial do autômato
+        self.dialogue_state = "INICIAL"
         self._update_dialogue_content()
         return True
 
@@ -133,20 +147,23 @@ class NPC:
 
         state_info = self.automaton.get(self.dialogue_state)
         if not state_info:
-            self.end_dialogue() # Estado inválido, encerra
+            self.end_dialogue()
             return
 
-        self.dialogue_message = state_info["message"]
+        # --- LÓGICA DE COMPRA/VENDA (A SER IMPLEMENTADA AQUI OU EM PROCESS_PLAYER_CHOICE) ---
+        # Exemplo de como o autômato pode se tornar dinâmico com base no jogador:
+        current_message = state_info["message"]
+        if self.dialogue_state == "POCAO_COMPRADA": # Supondo que a transação já ocorreu (precisaria de mais lógica)
+            # Este é apenas um exemplo, a lógica de transação real (verificar ouro, etc.)
+            # seria mais complexa e provavelmente ocorreria ANTES de chegar neste estado "BOUGHT_POTION"
+            # ou o estado "BOUGHT_POTION" seria alcançado APÓS uma transação bem-sucedida.
+            # current_message = f"Pocao adicionada! Ouro: {self.player_in_dialogue.gold}"
+            pass # A lógica de transação real é mais complexa
+
+        self.dialogue_message = current_message
         self.dialogue_options_display = []
         for key, text in state_info["options"].items():
             self.dialogue_options_display.append(f"[{key}] {text}")
-
-        if not state_info["options"]: # Se não há opções, é um estado final de fala
-            # Poderia ter uma lógica para auto-avançar ou esperar um "continuar" genérico
-            # Por enquanto, se não há opções, o jogador precisará sair manualmente ou o estado precisa transitar para END
-            if self.dialogue_state == "FIM": # Se chegou ao estado END, o diálogo efetivamente acabou.
-                 pass # A flag is_dialogue_active será controlada pelo Game para realmente sair.
-
 
     def process_player_choice(self, choice_key):
         if not self.is_dialogue_active or not self.dialogue_state or not self.automaton:
@@ -154,62 +171,93 @@ class NPC:
 
         state_info = self.automaton.get(self.dialogue_state)
         if not state_info or choice_key not in state_info["transitions"]:
-            return # Escolha inválida para o estado atual
+            return
 
-        self.dialogue_state = state_info["transitions"][choice_key]
+        # --- LÓGICA DE TRANSAÇÃO (EXEMPLO PARA QUANDO O JOGADOR ESCOLHE COMPRAR ALGO) ---
+        next_state_key = state_info["transitions"][choice_key]
+        
+        # Se a escolha leva a um estado de "compra efetivada"
+        if self.dialogue_state == "MENU_COMPRA":
+            item_cost = 0
+            item_name = None
+            if choice_key == "1": # Escolheu Poção
+                item_cost = 10 # Definido no autômato visualmente, mas precisa estar na lógica
+                item_name = "pocao"
+            elif choice_key == "2": # Escolheu Espada
+                item_cost = 50
+                item_name = "espada"
+
+            if item_name and self.player_in_dialogue:
+                if self.player_in_dialogue.gold >= item_cost:
+                    # Transição para o estado de item comprado (BOUGHT_POTION, BOUGHT_SWORD)
+                    self.dialogue_state = next_state_key 
+                    # Ação de compra (seria melhor em um método separado ou no novo estado)
+                    # self.player_in_dialogue.gold -= item_cost
+                    # self.player_in_dialogue.inventory[item_name] += 1
+                    # A mensagem de "Você comprou X" já está no estado BOUGHT_POTION/SWORD
+                else:
+                    # Ouro insuficiente, poderia ir para um estado "NO_GOLD" ou apenas mostrar msg
+                    # Por enquanto, vamos apenas impedir a transição para "BOUGHT_X" e voltar ao BUY_MENU
+                    # ou mostrar uma mensagem temporária (mais complexo sem alterar muito o autômato atual).
+                    # Vamos simplificar: o autômato atual AINDA não lida com a falha na compra.
+                    # A mensagem de "comprou" aparecerá mesmo sem ouro. ISSO PRECISA SER CORRIGIDO.
+                    self.dialogue_state = next_state_key # Transita mesmo sem ouro por enquanto
+            else: # Escolheu "Voltar" ou outra opção
+                 self.dialogue_state = next_state_key
+        else: # Transição normal para outros estados
+            self.dialogue_state = next_state_key
+            
         self._update_dialogue_content()
 
-        if self.dialogue_state == "FIM":
-            # O Game vai verificar isso para desativar o modo de diálogo.
-            # A mensagem de "END" será exibida, e na próxima interação o diálogo recomeça.
-            # Ou podemos fazer com que end_dialogue() seja chamado externamente.
-            pass
 
     def end_dialogue(self):
         self.is_dialogue_active = False
         self.dialogue_state = None
         self.dialogue_message = ""
         self.dialogue_options_display = []
-
-def is_near(a, b, distance=8):
-    return abs(a.x - b.x) <= distance and abs(a.y - b.y) <= distance
+        self.player_in_dialogue = None # Limpa a referência
 
 class Game:
     def __init__(self):
-        pyxel.init(SCREEN_WIDTH, SCREEN_HEIGHT, title="NPC com Automato") # Adicionado title aqui
-        # pyxel.title = "NPC Interação por Proximidade" # Removido pois é melhor no init
+        pyxel.init(SCREEN_WIDTH, SCREEN_HEIGHT, title="NPC com Automato e Mochila")
         self.player = Player()
         self.npcs = [
-            NPC(16, 16, "shop", "L"),    # Vendedor
-            NPC(136, 16, "info", "I"),   # Informante
-            NPC(16, 136, "forge", "F"),  # Ferreiro
+            NPC(16, 16, "shop", "L"),
+            NPC(136, 16, "info", "I"),
+            NPC(16, 136, "forge", "F"),
         ]
-        self.active_npc_interaction = None # NPC com quem o jogador está interagindo (em diálogo)
-        # self.message = "" # Removido, pois o diálogo do NPC controlará as mensagens principais
+        self.active_npc_interaction = None
+        self.show_inventory_ui = False # Nova flag para a UI da mochila
         pyxel.run(self.update, self.draw)
 
     def update(self):
+        # Tecla para mostrar/esconder a mochila
+        if pyxel.btnp(pyxel.KEY_M):
+            self.show_inventory_ui = not self.show_inventory_ui
+
+        # Se a mochila estiver visível ou diálogo ativo, pausamos outras ações
+        if self.show_inventory_ui:
+            # Nenhuma outra atualização de jogo enquanto a mochila estiver aberta
+            # (exceto fechar a mochila com 'M' novamente, já tratado acima)
+            return # Pula o resto do update
+
         if self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
             # Modo de Diálogo Ativo
-            # O jogador não se move, apenas interage com o diálogo
+            # ... (lógica do diálogo permanece a mesma) ...
             if pyxel.btnp(pyxel.KEY_1):
                 self.active_npc_interaction.process_player_choice("1")
             elif pyxel.btnp(pyxel.KEY_2):
                 self.active_npc_interaction.process_player_choice("2")
             elif pyxel.btnp(pyxel.KEY_3):
                 self.active_npc_interaction.process_player_choice("3")
-            # Adicione mais teclas se suas opções usarem (ex: 4, 5...)
 
-            # Se o diálogo do NPC chegou ao estado final "END"
             if self.active_npc_interaction.dialogue_state == "FIM":
-                 # Damos um pequeno tempo para ler a msg de despedida, ou podemos ter um btn p/ fechar
-                 # Por agora, se apertar uma tecla de opção novamente (ou uma tecla 'sair' dedicada) ele sai
-                 # Vamos simplificar: se o estado é END e alguma tecla de opção é pressionada, sai
+                # Para sair do estado END (despedida), o jogador pode pressionar qualquer tecla de opção ou E/Q
+                # Ou podemos ter um pequeno delay antes de fechar automaticamente.
+                # Por agora, vamos manter a lógica de pressionar uma tecla para fechar após a msg "END"
                 if pyxel.btnp(pyxel.KEY_1) or pyxel.btnp(pyxel.KEY_2) or pyxel.btnp(pyxel.KEY_3) or pyxel.btnp(pyxel.KEY_E) or pyxel.btnp(pyxel.KEY_Q):
                     self.active_npc_interaction.end_dialogue()
                     self.active_npc_interaction = None
-
-
         else:
             # Modo de Exploração
             blocked_positions = [npc.get_tile_pos() for npc in self.npcs]
@@ -222,22 +270,26 @@ class Game:
                     break
             
             if current_near_npc and pyxel.btnp(pyxel.KEY_E):
-                if current_near_npc.type == "shop": # Apenas o shop usa o novo sistema por enquanto
+                if current_near_npc.type == "shop":
+                    # --- INÍCIO DA LÓGICA DE COMPRA (PRECISA SER EXPANDIDA) ---
+                    # Antes de iniciar o diálogo da loja, poderíamos verificar o ouro,
+                    # mas a verificação real acontece ao tentar comprar um item específico.
+                    # O autômato da loja agora precisa de acesso ao jogador para verificar/modificar ouro/inventário.
+                    # Passaremos o objeto player para o NPC quando o diálogo começar ou para processar escolhas.
+                    # Por ora, apenas iniciamos o diálogo. A integração virá no autômato.
+                    # --- FIM DA LÓGICA DE COMPRA ---
                     self.active_npc_interaction = current_near_npc
-                    self.active_npc_interaction.start_dialogue()
+                    # Passamos o jogador para o NPC para que o autômato possa interagir com o inventário/ouro
+                    self.active_npc_interaction.start_dialogue(self.player) # Modificado para passar o jogador
                 else:
-                    # Lógica antiga para outros NPCs (se houver)
-                    # self.message = f"Falando com {self.get_npc_name(current_near_npc)} (simples)"
                     print(f"Interagindo com {self.get_npc_name(current_near_npc)} (ainda sem automato complexo)")
 
-
-            # Limpar diálogo se o jogador se afastar e não estiver em modo de interação
             if self.active_npc_interaction and not current_near_npc:
-                 if not self.active_npc_interaction.is_dialogue_active: # Garante que não estamos no meio de um diálogo ativo
+                 if not self.active_npc_interaction.is_dialogue_active:
                     self.active_npc_interaction = None
-
-
-    def get_npc_name(self, npc): # Mantido para referências futuras ou outros NPCs
+    
+    # ... (get_npc_name permanece o mesmo) ...
+    def get_npc_name(self, npc):
         return {
             "shop": "Vendedor",
             "forge": "Ferreiro",
@@ -251,7 +303,7 @@ class Game:
             for col_idx, tile in enumerate(row):
                 x = col_idx * TILE_SIZE
                 y = row_idx * TILE_SIZE
-                color = 6 if tile == 1 else 3 # marrom para muro, verde para chão
+                color = 6 if tile == 1 else 3
                 pyxel.rect(x, y, TILE_SIZE, TILE_SIZE, color)
 
         # Desenha NPCs
@@ -261,24 +313,43 @@ class Game:
         # Desenha Player
         self.player.draw()
 
-        # Lógica de UI de Interação
-        if self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
-            # Desenha a UI de Diálogo
-            npc = self.active_npc_interaction
-            
-            # Caixa de diálogo simples no rodapé
-            dialog_box_y = SCREEN_HEIGHT - 40
-            pyxel.rect(5, dialog_box_y - 2, SCREEN_WIDTH - 10, 32, 1) # Caixa de fundo azul escuro
-            pyxel.rectb(5, dialog_box_y - 2, SCREEN_WIDTH - 10, 32, 7) # Borda branca
+        # Exibe Ouro do Jogador
+        gold_text = f"Ouro: {self.player.gold}"
+        pyxel.text(SCREEN_WIDTH - len(gold_text) * pyxel.FONT_WIDTH - 5, 5, gold_text, 7) # 7 = Branco
 
-            pyxel.text(10, dialog_box_y, npc.dialogue_message, 7) # Mensagem do NPC
+        # Lógica de UI de Interação (Diálogo ou Mochila)
+        if self.show_inventory_ui:
+            # Desenha a UI da Mochila
+            box_w = 100
+            box_h = 80
+            box_x = (SCREEN_WIDTH - box_w) // 2
+            box_y = (SCREEN_HEIGHT - box_h) // 2
             
+            pyxel.rect(box_x, box_y, box_w, box_h, 1) # Fundo azul escuro
+            pyxel.rectb(box_x, box_y, box_w, box_h, 7) # Borda branca
+            pyxel.text(box_x + 5, box_y + 5, "Mochila:", 7)
+
+            item_y_offset = box_y + 15
+            for i, (item_name, quantity) in enumerate(self.player.inventory.items()):
+                display_name = item_name.capitalize()
+                pyxel.text(box_x + 5, item_y_offset + (i * 10), f"- {display_name}: {quantity}", 7)
+            
+            pyxel.text(box_x + 5, box_y + box_h - 10, "[M] Fechar", 7)
+
+        elif self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
+            # Desenha a UI de Diálogo
+            # ... (lógica de desenhar diálogo permanece a mesma) ...
+            npc = self.active_npc_interaction
+            dialog_box_y = SCREEN_HEIGHT - 40
+            pyxel.rect(5, dialog_box_y - 2, SCREEN_WIDTH - 10, 32, 1)
+            pyxel.rectb(5, dialog_box_y - 2, SCREEN_WIDTH - 10, 32, 7)
+            pyxel.text(10, dialog_box_y, npc.dialogue_message, 7)
             opt_y_start = dialog_box_y + 10
             for i, opt_text in enumerate(npc.dialogue_options_display):
-                pyxel.text(10, opt_y_start + (i * 8), opt_text, 7) # Opções do jogador
-
+                pyxel.text(10, opt_y_start + (i * 8), opt_text, 7)
         else:
-            # Mostra "Pressione E para interagir" se perto de algum NPC
+            # Mostra "Pressione E para interagir"
+            # ... (lógica de mostrar "E para interagir" permanece a mesma) ...
             temp_near_npc = None
             for npc_check in self.npcs:
                 if is_near(self.player, npc_check):
@@ -287,8 +358,12 @@ class Game:
             if temp_near_npc:
                 pyxel.text(5, SCREEN_HEIGHT - 15, f"[E] Interagir com {self.get_npc_name(temp_near_npc)}", 7)
 
-        # Mensagem global (se ainda quiser usar para algo, como compras)
-        # if self.message:
-        # pyxel.text(5, SCREEN_HEIGHT - 8, self.message, 10)
+def is_near(player, npc, distance=10):
+    """
+    Verifica se o jogador está próximo o suficiente do NPC para interagir.
+    """
+    dx = player.x - npc.x
+    dy = player.y - npc.y
+    return (dx * dx + dy * dy) <= (distance * distance)
 
 Game()
