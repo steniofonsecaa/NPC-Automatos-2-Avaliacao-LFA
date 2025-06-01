@@ -110,16 +110,4 @@ mensagens = {
 nome = "Mercador"
 tipo = "shop"
 
-# Teste interativo
-mercador = MercadorAFD()
-# Exemplo de interação
-interacoes = ['comprar', 'pressionar', 'pagar', 'sair']
-for acao in interacoes:
-    mercador.interagir(acao)
-
-print("\nNova interação: jogador pressiona e tenta pagar")
-mercador = MercadorAFD()
-mercador.interagir('comprar')
-mercador.interagir('pressionar')
-mercador.interagir('pagar')
 
