@@ -60,7 +60,7 @@ class NPCVendedor(NPCBase):
     def handle_tentativa_compra(self):
         current_state_info = self.automaton.get(self.dialogue_state)
         item_key = current_state_info.get("item_key")
-        preco_final = current_state_info.get("preco_final")
+        preco_final = current_state_info.get("preco_final_compra_jogador")
         self._message_is_final_from_handler = True
 
         if not item_key or preco_final is None or not self.player_in_dialogue:

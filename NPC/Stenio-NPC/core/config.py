@@ -19,7 +19,15 @@ COLOR_INVENTORY_TEXT = 7
 
 ITEM_DATA = {
     "pocao":  {"nome_exibicao": "Poção de Cura",    "preco_base": 10, "preco_desconto": 8,  "preco_venda_jogador_paga_npc": 10, "preco_npc_paga_jogador": 4, "tipo": "consumivel"},
-    "espada": {"nome_exibicao": "Espada Curta",   "preco_base": 50, "preco_desconto": 45, "preco_venda_jogador_paga_npc": 50, "tipo": "equipamento"}, # NPC pode não comprar espadas
+    "espada": {
+        "nome_exibicao": "Espada Curta",   
+        "preco_base": 50, 
+        "preco_desconto": 45, 
+        "preco_venda_jogador_paga_npc": 50, 
+        "tipo": "equipamento",
+        "melhoravel": True,
+        "custo_melhoria_ouro": 20,
+        "custo_melhoria_material": {"ferro": 2}},
     "madeira":{"nome_exibicao": "Madeira",                                                 "preco_npc_paga_jogador": 10, "tipo": "material"},
     "ferro":  {"nome_exibicao": "Ferro",                                                   "preco_npc_paga_jogador": 15, "tipo": "material"},
     "tecido": {"nome_exibicao": "Tecido",                                                  "preco_npc_paga_jogador": 5, "tipo": "material"},

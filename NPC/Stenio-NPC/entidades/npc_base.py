@@ -1,4 +1,3 @@
-# npc_rpg/entities/npc_base.py
 import pyxel
 from core.config import TILE_SIZE, ITEM_DATA
 
@@ -36,8 +35,7 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
         
         self.player_in_dialogue = player_obj
         self.is_dialogue_active = True
-        # Assumindo que todos os autômatos começam com um estado "INICIAL"
-        # Se não, cada subclasse de NPC precisaria definir seu estado inicial de diálogo.
+
         initial_dialogue_state = "INICIAL" 
         if initial_dialogue_state not in self.automaton:
             print(f"DEBUG: Estado inicial '{initial_dialogue_state}' nao encontrado no automato do NPC {self.type}.")
@@ -80,17 +78,25 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
                "{preco_npc_paga}" in raw_message or \
                "{jogador_qtd}" in raw_message:
                 
-                # Esta é a linha que deu erro (aproximadamente linha 112 na sua versão)
                 if item_key_para_formatacao and item_key_para_formatacao in ITEM_DATA:
                     item_config = ITEM_DATA[item_key_para_formatacao]
                     player_qty_str = str(self.player_in_dialogue.inventory.get(item_key_para_formatacao, 0)) if self.player_in_dialogue else "N/A"
+                    materiais_str = ""
+                    if "materiais_melhoria" in item_config:
+                        materiais_list = []
+                        for mat_key, mat_qty in item_config["materiais_melhoria"].items():
+                            mat_nome = ITEM_DATA.get(mat_key, {}).get("nome_exibicao", mat_key)
+                            materiais_list.append(f"{mat_qty} {mat_nome}")
+                        materiais_str = ", ".join(materiais_list) if materiais_list else "Nenhum"
                     try:
                         formatted_message = raw_message.format(
                             item_nome=item_config.get("nome_exibicao", item_key_para_formatacao),
-                            preco_base=item_config.get("preco_base", "N/A"),
-                            preco_desconto=item_config.get("preco_desconto", "N/A"),
-                            preco_npc_paga=item_config.get("preco_npc_paga_jogador", "N/A"),
-                            jogador_qtd=player_qty_str
+                            preco_base=item_config.get("preco_venda_jogador_paga_npc", "N/A"), # Ajustado para compra
+                            preco_desconto=item_config.get("preco_desconto", "N/A"), # Ajustado para compra
+                            preco_npc_paga=item_config.get("preco_npc_paga_jogador", "N/A"), # Para venda
+                            jogador_qtd=player_qty_str,
+                            custo_melhoria_ouro=item_config.get("custo_melhoria_ouro", "N/A"), # NOVO
+                            materiais_melhoria=materiais_str # NOVO
                         )
                     except KeyError as e:
                         print(f"DEBUG: Erro ao formatar msg (template) para '{self.dialogue_state}'. Placeholder: {e}")
@@ -135,11 +141,6 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
         action_handler_name = state_info.get("action_handler")
         if action_handler_name and not self.dialogue_options_display: 
             if hasattr(self, action_handler_name):
-                # ANTES de chamar o handler, se ele não for definir a msg final, resetamos a flag
-                # Mas os handlers que definimos (ameaca, persuasao, tentativa_compra, tentativa_venda)
-                # TODOS definem a mensagem final e a flag.
-                # A flag é resetada no 'else' do 'if not self._message_is_final_from_handler'.
-                # Então, está correto. O handler definirá a flag como True antes de chamar _update_dialogue_content.
                 getattr(self, action_handler_name)() 
             else:
                 print(f"AVISO CRÍTICO: Action handler '{action_handler_name}' definido para '{self.dialogue_state}' mas método NÃO existe em {self.__class__.__name__}!")
@@ -148,72 +149,77 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
 
 
     def process_player_choice(self, choice_key):
-        # ... (verificações iniciais como antes) ...
-        if not self.is_dialogue_active or not self.dialogue_state or not self.automaton: return # ...
-        current_state_info = self.automaton.get(self.dialogue_state) # ...
-        if not current_state_info: self.end_dialogue(); return # ...
+        if not self.is_dialogue_active or not self.dialogue_state or not self.automaton: return
+        current_state_info = self.automaton.get(self.dialogue_state)
+        if not current_state_info: self.end_dialogue(); return
 
         next_state_key = None
-
-        # Lógica para MENU_VENDA_ESCOLHER_ITEM (define active_transaction_item_key)
+        
         if self.dialogue_state == "MENU_VENDA_ESCOLHER_ITEM" and \
            hasattr(self, '_temp_sell_option_map') and self._temp_sell_option_map and \
            choice_key in self._temp_sell_option_map:
-
             self.active_transaction_item_key = self._temp_sell_option_map[choice_key]
             next_state_key = "CONFIRMAR_VENDA_ITEM_GENERICO"
-            # _temp_sell_option_map é limpo no início de generate_sell_options_for_player
+            
+        elif self.dialogue_state == "ESCOLHER_ITEM_MELHORIA":
+            if hasattr(self, '_temp_upgrade_option_map') and self._temp_upgrade_option_map and \
+               choice_key in self._temp_upgrade_option_map:
+                self.active_transaction_item_key = self._temp_upgrade_option_map[choice_key]
+                next_state_key = "CONFIRMAR_MELHORIA_ITEM"
+            elif choice_key == "9":
+                flag_nenhum_item = getattr(self, '_nenhum_item_para_melhorar_flag', False) # Pega com segurança
+                print(f"DEBUG_BASE (process_choice): ESCOLHER_ITEM_MELHORIA, choice '9'. Flag lida: {flag_nenhum_item}") # DEBUG
 
-        # Lógica para DETALHES_ITEM_X (compra - define active_transaction_item_key)
-        elif self.dialogue_state.startswith("DETALHES_ITEM_"):
-            item_key_do_estado_detalhes = current_state_info.get("item_key")
-            if item_key_do_estado_detalhes:
-                self.active_transaction_item_key = item_key_do_estado_detalhes
-            # A transição normal pegará o next_state_key (ex: para PROCESSAR_COMPRA_X ou NEGOCIANDO_PRECO_X)
+                if flag_nenhum_item: 
+                    next_state_key = "ENCERRADO"
+                    print(f"DEBUG_BASE (process_choice): Flag é TRUE. Tentando ir para ENCERRADO.") # DEBUG
+                else:
+                    transitions = current_state_info.get("transitions", {})
+                    next_state_key = transitions.get(choice_key) 
+                    print(f"DEBUG_BASE (process_choice): Flag é FALSE. Transição normal para: {next_state_key}") # DEBUG
+                if hasattr(self, '_nenhum_item_para_melhorar_flag') and self._nenhum_item_para_melhorar_flag:
+                    next_state_key = "ENCERRADO" 
+                else:
+                    transitions = current_state_info.get("transitions", {})
+                    next_state_key = transitions.get(choice_key) 
+            if hasattr(self, '_nenhum_item_para_melhorar_flag'):
+                self._nenhum_item_para_melhorar_flag = False
 
-        # Lógica para NEGOCIANDO_PRECO_X (mantém active_transaction_item_key)
-        elif self.dialogue_state.startswith("NEGOCIANDO_PRECO_") or \
-             self.dialogue_state.startswith("DESCONTO_OFERECIDO_") or \
-             self.dialogue_state.startswith("NEGOCIACAO_FALHOU_"):
-            # Garante que active_transaction_item_key já está setado do estado DETALHES_ITEM_X
-            if not self.active_transaction_item_key: # Se perdeu, tenta pegar do estado atual
-                self.active_transaction_item_key = current_state_info.get("item_key")
+        elif self.dialogue_state.startswith("DETALHES_ITEM_") or \
+             self.dialogue_state.startswith("CONFIRMAR_MELHORIA_ITEM"): 
+            item_key_do_estado = current_state_info.get("item_key") or self.active_transaction_item_key
+            if item_key_do_estado:
+                self.active_transaction_item_key = item_key_do_estado
 
-        # Se não foi um caso especial acima, ou se foi mas precisamos da transição do automato:
-        if next_state_key is None: # Se next_state_key ainda não foi definido pelos casos especiais
+        if next_state_key is None:
             transitions = current_state_info.get("transitions", {})
             if choice_key in transitions:
                 next_state_key = transitions[choice_key]
             else:
-                return # Escolha inválida
+                return 
 
-        # Limpar active_transaction_item_key se estamos voltando para menus principais ou terminando
-        if next_state_key in ["INICIAL", "MENU_COMPRA_CATEGORIAS", "MENU_VENDA_ESCOLHER_ITEM", "FIM_DIALOGO", "FIM_DIALOGO_NPC_AUSENTE"]:
+        
+        if next_state_key in ["INICIAL", "MENU_COMPRA_CATEGORIAS", "MENU_VENDA_ESCOLHER_ITEM", 
+                              "OFERECENDO_SERVICO", # Adicionado
+                              "FIM_DIALOGO", "FIM_DIALOGO_NPC_AUSENTE", "ENCERRADO"]:
             self.active_transaction_item_key = None
-
+            if hasattr(self, '_temp_sell_option_map'): self._temp_sell_option_map.clear()
+            if hasattr(self, '_temp_upgrade_option_map'): self._temp_upgrade_option_map.clear()
+            
         if next_state_key:
             self.dialogue_state = next_state_key
             self._update_dialogue_content()
-        # ... (else para debug crítico como antes) ...
 
-    #def end_dialogue(self):
-        #super().end_dialogue() # Se NPCBase herdar de algo que tenha end_dialogue
-        #self.active_transaction_item_key = None # Limpa ao finalizar o diálogo
-        # Certifique-se que _message_is_final_from_handler também é resetado aqui ou no start_dialogue
-        #self._message_is_final_from_handler = False
-        # ... (resto do end_dialogue)
-
-    def handle_tentativa_venda_jogador(self): # Este é chamado por PROCESSAR_VENDA_ITEM
-        # Define a flag PRIMEIRO para garantir que a mensagem definida aqui seja final
+    def handle_tentativa_venda_jogador(self): 
         self._message_is_final_from_handler = True
 
-        item_key_a_vender = self.active_transaction_item_key # Pega do contexto da transação
+        item_key_a_vender = self.active_transaction_item_key
 
         if not item_key_a_vender or not self.player_in_dialogue:
             self.dialogue_message = "Algo deu errado com esta transação."
             self.dialogue_state = "MENU_VENDA_ESCOLHER_ITEM"
             self.active_transaction_item_key = None 
-            self._update_dialogue_content() # Chamada recursiva, mas _message_is_final_from_handler será False na próxima iteração
+            self._update_dialogue_content()
             return
 
         item_config = ITEM_DATA.get(item_key_a_vender)
@@ -234,9 +240,6 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
             self.player_in_dialogue.gold += preco_que_npc_paga
             self.dialogue_state = "VENDA_SUCESSO"
             self.dialogue_message = f"Vendido! {item_nome_exibicao} por {preco_que_npc_paga}g. Ouro: {self.player_in_dialogue.gold}"
-            # O active_transaction_item_key pode ser limpo aqui ou quando voltar ao menu principal de venda/geral.
-            # Se VENDA_SUCESSO tem a opção de "Vender Mais Itens" que volta para MENU_VENDA_ESCOLHER_ITEM,
-            # então active_transaction_item_key será redefinido ou limpo por process_player_choice.
         else:
             self.dialogue_state = "VENDA_FALHOU_SEM_ITEM"
             self.dialogue_message = f"Oh! Parece que você não tem mais {item_nome_exibicao} para vender."
@@ -244,7 +247,6 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
         self._update_dialogue_content()
 
     def end_dialogue(self):
-        # ... (método end_dialogue como antes) ...
         self.is_dialogue_active = False
         self.dialogue_state = None
         self.dialogue_message = ""
@@ -252,14 +254,7 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
         self.player_in_dialogue = None
 
 
-        if hasattr(self, 'active_transaction_item_key'): # Verifica se o atributo existe antes de tentar deletar/resetar
+        if hasattr(self, 'active_transaction_item_key'): 
             self.active_transaction_item_key = None
-        if hasattr(self, '_message_is_final_from_handler'): # Verifica se o atributo existe
+        if hasattr(self, '_message_is_final_from_handler'):
             self._message_is_final_from_handler = False
-
-    #def end_dialogue(self):
-        #self.is_dialogue_active = False
-        #self.dialogue_state = None
-        #self.dialogue_message = ""
-        #self.dialogue_options_display = []
-        #self.player_in_dialogue = None
