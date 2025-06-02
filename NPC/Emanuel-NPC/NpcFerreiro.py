@@ -30,12 +30,12 @@ mensagens_customizadas = {
     'Esperando': "Sou o ferreiro desta vila. Precisa de algo?",
     'OferecendoServico': "Posso forjar armas, melhorar as suas ou aceitar um desafio. O que deseja?",
     'ForjandoArma': "Forjando sua arma... isso pode demorar.",
-    'MelhorandoArma': "Afiando e reforçando sua arma...",
+    'MelhorandoArma': "Afiando e reforcando sua arma...",
     'FalhaForja': "A forja falhou! Desculpe.",
-    'SucessoForja': "Aqui está! Uma arma poderosa forjada especialmente para você.",
-    'NegociandoPreco': "Esse serviço não é barato... pague ou saia.",
+    'SucessoForja': "Aqui esta! Uma arma poderosa forjada especialmente para você.",
+    'NegociandoPreco': "Esse servico nao e barato... pague ou saia.",
     'AceitandoDesafio': "Desafio aceito! Prepare-se para lutar.",
-    'RecusandoServico': "Não vou trabalhar para alguém como você!",
+    'RecusandoServico': "Nao vou trabalhar para alguem como você!",
     'Encerrado': "Boa sorte em sua jornada, guerreiro!"
 }
 

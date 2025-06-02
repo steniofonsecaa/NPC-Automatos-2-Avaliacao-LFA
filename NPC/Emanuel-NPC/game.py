@@ -1,8 +1,38 @@
 import pyxel
 import NpcMercante
 import NpcFerreiro
+import NpcInformante
 import random
+import Imagens
+def converter_ap_para_dialogo(estados, transicoes, mensagens_customizadas):
+    ap_dict = {}
 
+    # Usa as perguntas do arquivo do NPC
+    perguntas_possiveis = NpcInformante.perguntas_possiveis
+
+    for estado in estados:
+        ap_dict[estado] = {
+            "message": mensagens_customizadas.get(estado, f"Você está no estado {estado}."),
+            "options": {},
+            "transitions": {}
+        }
+
+        # Se for um estado de resposta ou espera, adiciona as opções de perguntas
+        if estado in ['Respondendo', 'Esperando']:
+            for i, pergunta in enumerate(perguntas_possiveis, start=1):
+                ap_dict[estado]["options"][str(i)] = f"perguntar sobre {pergunta}"
+                ap_dict[estado]["transitions"][str(i)] = 'Respondendo'
+
+            # Adiciona a opção de sair
+            idx = str(len(perguntas_possiveis) + 1)
+            ap_dict[estado]["options"][idx] = "sair"
+            ap_dict[estado]["transitions"][idx] = 'Encerrado'
+
+        elif estado == 'Encerrado':
+            ap_dict[estado]["options"] = {}
+            ap_dict[estado]["transitions"] = {}
+
+    return ap_dict
 def converter_afn_para_dialogo(estados, transicoes, mensagens_customizadas):
     afn_dict = {}
 
@@ -34,9 +64,35 @@ def converter_afd_para_dialogo(estados, transicoes, mensagens_customizadas):
         automato[origem]["transitions"][option_key] = destino
     return automato
 
-SCREEN_WIDTH = 160
-SCREEN_HEIGHT = 160
-TILE_SIZE = 8
+SCREEN_WIDTH = 180
+SCREEN_HEIGHT = 200
+TILE_SIZE = 10
+def text_width(text):
+    return len(text) * 4  # 4 pixels por caractere
+
+def wrap_text(text, max_width):
+    lines = []
+    current_line = ""
+    for word in text.split():
+        if text_width(current_line + " " + word) <= max_width:
+            current_line += " " + word if current_line else word
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    return lines
+
+def blt_scale2x(x, y, banco, u, v, w, h):
+    for i in range(w):
+        for j in range(h):
+            color = pyxel.images[banco].pget(u + i, v + j)
+            if color != 0:  # Ignora cor 0 (transparente)
+                pyxel.pset(x + i * 2, y + j * 2, color)
+                pyxel.pset(x + i * 2 + 1, y + j * 2, color)
+                pyxel.pset(x + i * 2, y + j * 2 + 1, color)
+                pyxel.pset(x + i * 2 + 1, y + j * 2 + 1, color)
+            
 # Carregar AFDs de NPCs
 NPC_AUTOMATONS = {
     NpcMercante.tipo: converter_afd_para_dialogo(
@@ -48,6 +104,11 @@ NPC_AUTOMATONS = {
         NpcFerreiro.estados,
         NpcFerreiro.transicoes,
         NpcFerreiro.mensagens_customizadas
+    ),
+    NpcInformante.tipo: converter_ap_para_dialogo(
+    NpcInformante.estados,
+    NpcInformante.transicoes,
+    NpcInformante.mensagens_customizadas
     ),
     # "info": ...
 }
@@ -112,6 +173,8 @@ class NPC:
     def __init__(self, x, y, npc_type, label):
         self.x = x
         self.y = y
+        self.resumo_final = ""
+        self.dialogue_end_timer = 0
         self.type = npc_type
         self.label = label
         self.color = {"shop": 8, "forge": 10, "info": 7}.get(npc_type, 9)
@@ -165,7 +228,8 @@ class NPC:
         for key, text in state_info["options"].items():
             self.dialogue_options_display.append(f"[{key}] {text}")
 
-        if not state_info["options"]: # Se não há opções, é um estado final de fala
+        if not state_info["options"]:
+            self.dialogue_end_timer = 60  # 60 frames (~2 segundos) # Se não há opções, é um estado final de fala
             # Poderia ter uma lógica para auto-avançar ou esperar um "continuar" genérico
             # Por enquanto, se não há opções, o jogador precisará sair manualmente ou o estado precisa transitar para END
             if self.dialogue_state == "END": # Se chegou ao estado END, o diálogo efetivamente acabou.
@@ -180,14 +244,23 @@ class NPC:
         if not state_info or choice_key not in state_info["transitions"]:
             return
 
-        possiveis_estados = state_info["transitions"][choice_key]
-        if isinstance(possiveis_estados, list):
-            import random
-            self.dialogue_state = random.choice(possiveis_estados)
-        else:
-            self.dialogue_state = possiveis_estados
+        proximo_estado = state_info["transitions"][choice_key]
+        self.dialogue_state = proximo_estado
 
-        self.dialogue_message = self.automaton[self.dialogue_state]["message"]
+        if self.type == "info":
+            opcao_texto = state_info["options"].get(choice_key, "")
+            if opcao_texto.startswith("perguntar sobre"):
+                tema = opcao_texto.replace("perguntar sobre ", "")
+                NpcInformante.empilhar(tema)
+                # Aqui buscamos a resposta específica e colocamos no diálogo:
+                explicacao = NpcInformante.respostas_perguntas.get(tema, "Informação desconhecida.")
+                self.dialogue_message = f"{tema.capitalize()}: {explicacao}"
+            elif opcao_texto == "sair":
+                self.dialogue_message = "Você perguntou sobre: " + ", ".join(NpcInformante.pilha)
+
+        else:
+            self.dialogue_message = self.automaton[self.dialogue_state]["message"]
+
         self.dialogue_options_display = [
             f"[{k}] {v}" for k, v in self.automaton[self.dialogue_state]["options"].items()
         ]
@@ -213,9 +286,16 @@ class Game:
         ]
         self.active_npc_interaction = None # NPC com quem o jogador está interagindo (em diálogo)
         # self.message = "" # Removido, pois o diálogo do NPC controlará as mensagens principais
+        self.imagens = Imagens.ImagensNPC()
         pyxel.run(self.update, self.draw)
 
     def update(self):
+        if self.active_npc_interaction and self.active_npc_interaction.dialogue_end_timer > 0:
+            self.active_npc_interaction.dialogue_end_timer -= 1
+            if self.active_npc_interaction.dialogue_end_timer <= 0:
+                self.active_npc_interaction.end_dialogue()
+                self.active_npc_interaction = None
+
         if self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
             # Modo de Diálogo Ativo
             # O jogador não se move, apenas interage com o diálogo
@@ -225,10 +305,22 @@ class Game:
                 self.active_npc_interaction.process_player_choice("2")
             elif pyxel.btnp(pyxel.KEY_3):
                 self.active_npc_interaction.process_player_choice("3")
+            elif pyxel.btnp(pyxel.KEY_4):
+                self.active_npc_interaction.process_player_choice("4")
+            elif pyxel.btnp(pyxel.KEY_5):
+                self.active_npc_interaction.process_player_choice("5")
+            elif pyxel.btnp(pyxel.KEY_6):
+                self.active_npc_interaction.process_player_choice("6")
+            elif pyxel.btnp(pyxel.KEY_7):
+                self.active_npc_interaction.process_player_choice("7")
+            elif pyxel.btnp(pyxel.KEY_8):
+                self.active_npc_interaction.process_player_choice("8")
+            elif pyxel.btnp(pyxel.KEY_9):
+                self.active_npc_interaction.process_player_choice("9")
             # Adicione mais teclas se suas opções usarem (ex: 4, 5...)
 
-            # Se o diálogo do NPC chegou ao estado final "END"
-            if self.active_npc_interaction.dialogue_state == "END":
+            # Se o diálogo do NPC chegou ao estado final "Encerrado"
+            if self.active_npc_interaction.dialogue_state == "Encerrado":
                  # Damos um pequeno tempo para ler a msg de despedida, ou podemos ter um btn p/ fechar
                  # Por agora, se apertar uma tecla de opção novamente (ou uma tecla 'sair' dedicada) ele sai
                  # Vamos simplificar: se o estado é END e alguma tecla de opção é pressionada, sai
@@ -286,21 +378,53 @@ class Game:
         # Desenha Player
         self.player.draw()
 
-        # Lógica de UI de Interação
         if self.active_npc_interaction and self.active_npc_interaction.is_dialogue_active:
             # Desenha a UI de Diálogo
             npc = self.active_npc_interaction
-            
-            # Caixa de diálogo simples no rodapé
-            dialog_box_y = SCREEN_HEIGHT - 40
-            pyxel.rect(5, dialog_box_y - 2, SCREEN_WIDTH - 10, 32, 1) # Caixa de fundo azul escuro
-            pyxel.rectb(5, dialog_box_y - 2, SCREEN_WIDTH - 10, 32, 7) # Borda branca
 
-            pyxel.text(10, dialog_box_y, npc.dialogue_message, 7) # Mensagem do NPC
-            
-            opt_y_start = dialog_box_y + 10
+            # Caixa de diálogo no rodapé
+            # Caixa de diálogo dinâmica
+            texto_x = 50  # Posição inicial do texto
+            texto_y = None  # Vamos calcular depois
+
+            # Calcular linhas do diálogo
+            max_text_width = SCREEN_WIDTH - texto_x - 10
+            wrapped_lines = wrap_text(npc.dialogue_message, max_text_width)
+            num_text_lines = len(wrapped_lines)
+
+            # Calcular altura total: linhas do texto + linhas das opções
+            num_options = len(npc.dialogue_options_display)
+            line_height = 8
+            padding = 10
+
+            conteudo_altura = (num_text_lines + num_options) * line_height + padding
+
+            # Caixa ajustada
+            dialog_box_h = conteudo_altura + 10
+            dialog_box_y = SCREEN_HEIGHT - dialog_box_h - 5
+
+            pyxel.rect(5, dialog_box_y, SCREEN_WIDTH - 10, dialog_box_h, 1)   # Caixa azul escuro
+            pyxel.rectb(5, dialog_box_y, SCREEN_WIDTH - 10, dialog_box_h, 7)  # Borda branca
+
+            # Desenha o retrato do NPC (se houver)
+            retrato = self.imagens.get_retrato(npc.type)
+            retrato_x = -5
+            retrato_y = dialog_box_y - retrato["h"] + 10  # Suba o retrato 8 pixels acima da caixa
+            blt_scale2x(retrato_x, retrato_y, retrato["banco"], retrato["u"], retrato["v"], retrato["w"], retrato["h"])
+
+            # Texto do diálogo e opções ao lado do retrato
+            texto_x = 50  # Largura do retrato + margem
+            texto_y = dialog_box_y + 5
+
+            max_text_width = SCREEN_WIDTH - texto_x - 10  # Ajuste conforme sua caixa, a mensagem no NPC
+            wrapped_lines = wrap_text(npc.dialogue_message, max_text_width)
+            for i, line in enumerate(wrapped_lines):
+                pyxel.text(texto_x, texto_y + i * 8, line, 7)
+
+            opt_y_start = texto_y + len(wrapped_lines) * 8 + 8
             for i, opt_text in enumerate(npc.dialogue_options_display):
-                pyxel.text(10, opt_y_start + (i * 8), opt_text, 7) # Opções do jogador
+                pyxel.text(texto_x, opt_y_start + (i * 8), opt_text, 7)  # Opções do jogador
+            
 
         else:
             # Mostra "Pressione E para interagir" se perto de algum NPC
@@ -311,9 +435,5 @@ class Game:
                     break
             if temp_near_npc:
                 pyxel.text(5, SCREEN_HEIGHT - 15, f"[E] Interagir com {self.get_npc_name(temp_near_npc)}", 7)
-
-        # Mensagem global (se ainda quiser usar para algo, como compras)
-        # if self.message:
-        # pyxel.text(5, SCREEN_HEIGHT - 8, self.message, 10)
 
 Game()

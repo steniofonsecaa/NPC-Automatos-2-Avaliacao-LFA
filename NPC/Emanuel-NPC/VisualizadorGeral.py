@@ -1,36 +1,49 @@
+
 from graphviz import Digraph
 import importlib
 import os
 import platform
 
 # Lista dos NPCs (nomes dos arquivos sem .py)
-npcs = ['NpcMercante', 'npc_guarda', 'npc_monstro']  # Adicione seus NPCs aqui
+npcs = ['NpcMercante', 'NpcFerreiro', 'NpcInformante']  # Atualize com seus NPCs
 
 for npc_nome in npcs:
-    # Importar o módulo do NPC dinamicamente
     try:
         npc = importlib.import_module(npc_nome)
         estados = npc.estados
-        transicoes = npc.transicoes
         nome_npc = getattr(npc, 'nome', npc_nome)
 
-        # Criar o diagrama
-        dot = Digraph(comment=f'AFD {nome_npc}')
+        dot = Digraph(comment=f'AFD/AFN/AP {nome_npc}')
         for estado in estados:
             shape = 'ellipse'
-            if estado.lower() in ['concluindo', 'encerrado', 'fugindo', 'recusandovenda']:
+            if estado.lower() in ['concluindo', 'encerrado', 'fugindo', 'recusandovenda', 'sucessoforja', 'falhaforja','sair']:
                 shape = 'doublecircle'
             dot.node(estado, shape=shape)
 
-        for origem, destino, rotulo in transicoes:
-            dot.edge(origem, destino, label=rotulo)
+        transicoes = npc.transicoes
+
+        if npc_nome.lower() == 'npcinformante':
+            # 💡 É o AP do Informante
+            for (origem, entrada), destinos in transicoes.items():
+                for destino in destinos:
+                    dot.edge(origem, destino, label=f"{entrada} / push(pop)")
+        elif isinstance(transicoes, list):
+            # AFD clássico
+            for origem, destino, rotulo in transicoes:
+                dot.edge(origem, destino, label=rotulo)
+        elif isinstance(transicoes, dict):
+            # AFN simples (Mercante / Ferreiro)
+            for (origem, entrada), destinos in transicoes.items():
+                for destino in destinos:
+                    dot.edge(origem, destino, label=entrada)
+        else:
+            print(f"❌ Transições não reconhecidas para {nome_npc}")
 
         # Salvar e abrir
-        arquivo_saida = f'{nome_npc.lower()}_afd'
+        arquivo_saida = f'{nome_npc.lower()}_automato'
         dot.format = 'png'
         output_path = dot.render(arquivo_saida, cleanup=True)
 
-        # Abrir no visualizador padrão
         if platform.system() == 'Windows':
             os.startfile(output_path)
         elif platform.system() == 'Darwin':
