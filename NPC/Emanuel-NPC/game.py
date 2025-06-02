@@ -249,21 +249,35 @@ class NPC:
 
         if self.type == "info":
             opcao_texto = state_info["options"].get(choice_key, "")
+
             if opcao_texto.startswith("perguntar sobre"):
                 tema = opcao_texto.replace("perguntar sobre ", "")
                 NpcInformante.empilhar(tema)
-                # Aqui buscamos a resposta específica e colocamos no diálogo:
                 explicacao = NpcInformante.respostas_perguntas.get(tema, "Informação desconhecida.")
                 self.dialogue_message = f"{tema.capitalize()}: {explicacao}"
+
             elif opcao_texto == "sair":
-                self.dialogue_message = "Você perguntou sobre: " + ", ".join(NpcInformante.pilha)
+                perguntas = NpcInformante.pilha.copy()
+                if perguntas:
+                    self.dialogue_message = "Você perguntou sobre: " + ", ".join(perguntas)
+                else:
+                    self.dialogue_message = "Você não perguntou nada."
 
         else:
+            # Caso padrão (Mercador ou Ferreiro)
+            if isinstance(proximo_estado, list):
+                self.dialogue_state = random.choice(proximo_estado)
+            else:
+                self.dialogue_state = proximo_estado
+
             self.dialogue_message = self.automaton[self.dialogue_state]["message"]
 
+        # Atualizar opções
         self.dialogue_options_display = [
             f"[{k}] {v}" for k, v in self.automaton[self.dialogue_state]["options"].items()
         ]
+
+
 
     def end_dialogue(self):
         self.is_dialogue_active = False

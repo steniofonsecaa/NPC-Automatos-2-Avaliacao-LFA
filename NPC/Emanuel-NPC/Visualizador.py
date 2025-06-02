@@ -20,14 +20,14 @@ for estado in estados:
 # Definindo as transições (arestas)
 transicoes = [
     ('Esperando', 'ApresentandoItens', 'comprar'),
-    ('Esperando', 'Fugindo', 'ameaçar'),
+    ('Esperando', 'Fugindo', 'ameacar'),
     ('ApresentandoItens', 'NegociandoPreco', 'pressionar'),
-    ('ApresentandoItens', 'AceitandoTroca', 'oferecer_troca'),
+    ('ApresentandoItens', 'AceitandoTroca', 'OferecerTroca'),
     ('ApresentandoItens', 'verificar_compra', 'pagar'),
     ('ApresentandoItens', 'Encerrado', 'sair'),
     ('NegociandoPreco', 'OferecendoDesconto', 'pressionar'),
     ('NegociandoPreco', 'verificar_compra', 'pagar'),
-    ('NegociandoPreco', 'AceitandoTroca', 'oferecer_troca'),
+    ('NegociandoPreco', 'AceitandoTroca', 'OferecerTroca'),
     ('NegociandoPreco', 'Encerrado', 'sair'),
     ('OferecendoDesconto', 'verificar_compra', 'pagar'),
     ('OferecendoDesconto', 'Encerrado', 'sair'),
