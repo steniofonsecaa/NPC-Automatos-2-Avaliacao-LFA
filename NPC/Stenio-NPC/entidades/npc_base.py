@@ -184,6 +184,15 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
                     next_state_key = transitions.get(choice_key) 
             if hasattr(self, '_nenhum_item_para_melhorar_flag'):
                 self._nenhum_item_para_melhorar_flag = False
+                
+        #Informante
+        elif self.dialogue_state == "ESCOLHER_PERGUNTA" and \
+             hasattr(self, '_temp_question_option_map') and self._temp_question_option_map and \
+             choice_key in self._temp_question_option_map:
+    
+            self.active_transaction_item_key = self._temp_question_option_map[choice_key] 
+            next_state_key = "PROCESSAR_ESCOLHA_PERGUNTA"
+            # print(f"DEBUG_BASE (process_choice): Informante - Escolheu tópico '{self.active_transaction_item_key}', indo para '{next_state_key}'")
 
         elif self.dialogue_state.startswith("DETALHES_ITEM_") or \
              self.dialogue_state.startswith("CONFIRMAR_MELHORIA_ITEM"): 

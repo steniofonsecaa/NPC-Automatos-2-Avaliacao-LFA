@@ -11,6 +11,7 @@ from entidades.npc_vendedor import NPCVendedor
 from entidades.npc_informante import NPCInformante 
 from entidades.npc_base import NPCBase
 from entidades.npc_ferreiro import NPCFerreiro
+from entidades.npc_informante import NPCInformante
 TARGET_GAME_FPS = 60
 
 
