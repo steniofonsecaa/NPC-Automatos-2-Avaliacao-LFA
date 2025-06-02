@@ -35,29 +35,29 @@ class MercadorAFD:
                     self.estado = proximo_estado
                     self._mensagem_estado()
             else:
-                print(f"Mercador: 'Não sei como reagir a {entrada} no estado {self.estado}'.")
+                print(f"Mercador: 'nao sei como reagir a {entrada} no estado {self.estado}'.")
         else:
             self._verificar_compra()
 
     def _verificar_compra(self):
         if random.random() < self.chance_recusar:
             self.estado = 'RecusandoVenda'
-            print("Mercador cruza os bracos: 'Não vendo para voce!'.")
+            print("Mercador cruza os bracos: 'nao vendo para voce!'.")
         else:
             self.estado = 'ConcluindoVenda'
-            print("Mercador sorri: 'Negócio fechado, obrigado pela compra!'")
+            print("Mercador sorri: 'negocio fechado, obrigado pela compra!'")
 
     def _mensagem_estado(self):
         mensagens = {
             'Esperando': "Mercador esta esperando um cliente...",
             'ApresentandoItens': "Mercador mostra seus itens: 'Veja, tenho boas ofertas!'",
-            'NegociandoPreco': "Mercador diz: 'Podemos negociar o preco, mas não abuse!'",
+            'NegociandoPreco': "Mercador diz: 'Podemos negociar o preco, mas nao abuse!'",
             'OferecendoDesconto': "Mercador suspira: 'Ta bom, um desconto pequeno!'",
             'AceitandoTroca': "Mercador pondera: 'Hmm, aceito essa troca...'",
-            'RecusandoVenda': "Mercador diz: 'Não vendo para voce!'",
-            'ConcluindoVenda': "Mercador sorri: 'Negócio fechado, obrigado pela compra!'",
+            'RecusandoVenda': "Mercador diz: 'nao vendo para voce!'",
+            'ConcluindoVenda': "Mercador sorri: 'negocio fechado, obrigado pela compra!'",
             'Fugindo': "Mercador grita: 'Socorro!' e foge rapidamente!",
-            'Encerrado': "Mercador se despede: 'Até logo!'",
+            'Encerrado': "Mercador se despede: 'Ate logo!'",
         }
         print(mensagens.get(self.estado, f"Mercador esta em um estado estranho: {self.estado}"))
 # Definindo os dados para o visualizador
@@ -90,26 +90,26 @@ transicoes = [
 mensagens_customizadas = {
     'Esperando': "Ola, aventureiro! Posso ajuda-lo com algo?",
     'ApresentandoItens': "Veja meus produtos: pocões, espadas e muito mais!",
-    'NegociandoPreco': "Podemos discutir o preco, mas não exagere!",
+    'NegociandoPreco': "Podemos discutir o preco, mas nao exagere!",
     'OferecendoDesconto': "Tudo bem, posso oferecer um pequeno desconto.",
-    'AceitandoTroca': "Sua oferta é interessante. Aceito a troca.",
-    'RecusandoVenda': "Desculpe, não posso vender para voce.",
-    'ConcluindoVenda': "Negócio fechado! Obrigado pela compra.",
+    'AceitandoTroca': "Sua oferta e interessante. Aceito a troca.",
+    'RecusandoVenda': "Desculpe, nao posso vender para voce.",
+    'ConcluindoVenda': "negocio fechado! Obrigado pela compra.",
     'Fugindo': "Socorro! Estou sendo ameacado!",
-    'verificar_compra': "O mercador esta pensando se vai vender ou não para voce...",
-    'Encerrado': "Até logo! Volte sempre que precisar."
+    'verificar_compra': "O mercador esta pensando se vai vender ou nao para voce...",
+    'Encerrado': "Ate logo! Volte sempre que precisar."
 }
 mensagens = {
             'Esperando': "Mercador esta esperando um cliente...",
             'ApresentandoItens': "Mercador mostra seus itens: 'Veja, tenho boas ofertas!'",
-            'NegociandoPreco': "Mercador diz: 'Podemos negociar o preco, mas não abuse!'",
+            'NegociandoPreco': "Mercador diz: 'Podemos negociar o preco, mas nao abuse!'",
             'OferecendoDesconto': "Mercador suspira: 'Ta bom, um desconto pequeno!'",
             'AceitandoTroca': "Mercador pondera: 'Hmm, aceito essa troca...'",
-            'RecusandoVenda': "Mercador diz: 'Não vendo para voce!'",
-            'ConcluindoVenda': "Mercador sorri: 'Negócio fechado, obrigado pela compra!'",
-            'verificar_compra': "O mercador esta pensando se vai vender ou não para voce...",
+            'RecusandoVenda': "Mercador diz: 'nao vendo para voce!'",
+            'ConcluindoVenda': "Mercador sorri: 'negocio fechado, obrigado pela compra!'",
+            'verificar_compra': "O mercador esta pensando se vai vender ou nao para voce...",
             'Fugindo': "Mercador grita: 'Socorro!' e foge rapidamente!",
-            'Encerrado': "Mercador se despede: 'Até logo!'",
+            'Encerrado': "Mercador se despede: 'Ate logo!'",
         }
 nome = "Mercador"
 tipo = "shop"

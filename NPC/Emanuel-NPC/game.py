@@ -12,7 +12,7 @@ def converter_ap_para_dialogo(estados, transicoes, mensagens_customizadas):
 
     for estado in estados:
         ap_dict[estado] = {
-            "message": mensagens_customizadas.get(estado, f"Você está no estado {estado}."),
+            "message": mensagens_customizadas.get(estado, f"voce está no estado {estado}."),
             "options": {},
             "transitions": {}
         }
@@ -38,7 +38,7 @@ def converter_afn_para_dialogo(estados, transicoes, mensagens_customizadas):
 
     for estado in estados:
         afn_dict[estado] = {
-            "message": mensagens_customizadas.get(estado, f"Você está no estado {estado}."),
+            "message": mensagens_customizadas.get(estado, f"voce está no estado {estado}."),
             "options": {},
             "transitions": {},
         }
@@ -54,7 +54,7 @@ def converter_afd_para_dialogo(estados, transicoes, mensagens_customizadas):
     automato = {}
     for estado in estados:
         automato[estado] = {
-            "message": mensagens_customizadas.get(estado, f"Você está no estado {estado}."),
+            "message": mensagens_customizadas.get(estado, f"voce está no estado {estado}."),
             "options": {},
             "transitions": {}
         }
@@ -253,15 +253,15 @@ class NPC:
             if opcao_texto.startswith("perguntar sobre"):
                 tema = opcao_texto.replace("perguntar sobre ", "")
                 NpcInformante.empilhar(tema)
-                explicacao = NpcInformante.respostas_perguntas.get(tema, "Informação desconhecida.")
+                explicacao = NpcInformante.respostas_perguntas.get(tema, "Informacao desconhecida.")
                 self.dialogue_message = f"{tema.capitalize()}: {explicacao}"
 
             elif opcao_texto == "sair":
                 perguntas = NpcInformante.pilha.copy()
                 if perguntas:
-                    self.dialogue_message = "Você perguntou sobre: " + ", ".join(perguntas)
+                    self.dialogue_message = "Voce perguntou sobre: " + ", ".join(perguntas)
                 else:
-                    self.dialogue_message = "Você não perguntou nada."
+                    self.dialogue_message = "voce não perguntou nada."
 
         else:
             # Caso padrão (Mercador ou Ferreiro)
