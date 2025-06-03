@@ -1,111 +1,114 @@
-from graphviz import Digraph
+import graphviz
 import os
 import platform
 
+# As definições do autômato do informante
 PERGUNTAS_DISPONIVEIS_INFORMANTE = [
-    "cidade", "castelo", "monstros", "historia", "lendas", 
+    "cidade", "castelo", "monstros", "historia", "lendas",
     "animais magicos", "armas lendarias"
-]
+] # cite: 1
 
 RESPOSTAS_INFORMANTE = {
-    'cidade': "As cidades deste reino são antigas e cheias de segredos...",
-    'castelo': "O grande castelo ao norte? Dizem que foi erguido por gigantes...",
-}
+    'cidade': "As cidades deste reino são antigas e cheias de segredos. Cada pedra conta uma história.", # cite: 1
+    'castelo': "O grande castelo ao norte? Dizem que foi erguido por gigantes e que seus salões ecoam com os fantasmas do passado.", # cite: 1
+    'monstros': "As bestas selvagens e criaturas da noite espreitam além das muralhas seguras. Viaje com cautela, especialmente ao anoitecer!", # cite: 1
+    'historia': "Este reino viu a ascensão e queda de impérios! Heróis nasceram e pereceram, e muitas crônicas se perderam no tempo.", # cite: 1
+    'lendas': "Ah, as lendas! Falam de tesouros esquecidos, bestas míticas e ilhas que aparecem e desaparecem com a maré.", # cite: 1
+    'animais magicos': "Sim, criaturas imbuídas de magia ainda vagam pelas florestas primordiais e picos montanhosos. Avistá-las é um privilégio... ou um aviso.", # cite: 1
+    'armas lendarias': "Existem contos sobre armas de poder incomensurável, forjadas pelos deuses antigos ou por artesãos de eras esquecidas. Encontrá-las é o destino de poucos." # cite: 1
+} # cite: 1
 
 INFORMANTE_NPC_AUTOMATON = {
     "INICIAL": {
-        "message": "Saudações, viajante! Buscas conhecimento ou apenas um pouco de prosa? Tenho muitas histórias e informações.",
-        "options": {"1": "Fazer uma pergunta", "2": "Despedir-se"},
-        "transitions": {"1": "ESCOLHER_PERGUNTA", "2": "ENCERRADO"}
+        "message": "Saudações, viajante! Buscas conhecimento ou apenas um pouco de prosa? Tenho muitas histórias e informações.", # cite: 1
+        "options": {
+            "1": "Fazer uma pergunta", # cite: 1
+            "2": "Despedir-se" # cite: 1
+        },
+        "transitions": {
+            "1": "ESCOLHER_PERGUNTA", # cite: 1
+            "2": "ENCERRADO" # cite: 1
+        }
     },
-    "ESCOLHER_PERGUNTA": { 
-        "message": "Muito bem. Sobre o que sua curiosidade se debruça?",
-        "options_generator_handler": "generate_informant_questions",
-        "options": {"9": "Não tenho mais perguntas (Sair)"},
-        "transitions": {"9": "ENCERRADO"}
+    "ESCOLHER_PERGUNTA": {
+        "message": "Muito bem. Sobre o que sua curiosidade se debruça?", # cite: 1
+        "options_generator_handler": "generate_informant_questions", # cite: 1
+        "options": {
+            "9": "Não tenho mais perguntas (Sair)" # cite: 1
+        },
+        "transitions": {
+            "9": "ENCERRADO" # cite: 1
+        }
     },
     "PROCESSAR_ESCOLHA_PERGUNTA": {
-        "action_handler": "handle_escolha_pergunta",
-        "message": "Hmm, uma boa pergunta...",
-        "options": {}, "transitions": {}
+        "action_handler": "handle_escolha_pergunta", # cite: 1
+        "message": "Hmm, uma boa pergunta...", # cite: 1
+        "options": {}, # cite: 1
+        "transitions": {} # cite: 1
     },
     "EXIBINDO_RESPOSTA": {
-        "message": "Sobre isso, posso dizer que...", 
-        "options": {"1": "Fazer outra pergunta", "2": "Entendido (Sair)"},
-        "transitions": {"1": "ESCOLHER_PERGUNTA", "2": "ENCERRADO"}
+        "message": "Sobre isso, posso dizer que...", # cite: 1
+        "options": {
+            "1": "Fazer outra pergunta", # cite: 1
+            "2": "Entendido (Sair)" # cite: 1
+        },
+        "transitions": {
+            "1": "ESCOLHER_PERGUNTA", # cite: 1
+            "2": "ENCERRADO" # cite: 1
+        }
     },
     "ENCERRADO": {
-        "message": "Que seus caminhos sejam iluminados pelo conhecimento. Até breve!",
-        "options": {}, "transitions": {}
+        "message": "Que seus caminhos sejam iluminados pelo conhecimento. Até breve!", # cite: 1
+        "options": {}, # cite: 1
+        "transitions": {} # cite: 1
     }
-}
+} # cite: 1
 
-RESULTADOS_HANDLERS_INFORMANTE = {
-    "PROCESSAR_ESCOLHA_PERGUNTA": {
-        "Resposta Encontrada": "EXIBINDO_RESPOSTA"
-    }
-}
+# ---
+def generate_automaton_graph_informant(automaton_data, graph_name="npc_informante_afd"):
+    """
+    Gera um grafo de estados e transições a partir dos dados do autômato do Informante.
 
-def gerar_grafo_informante_simples(automato_dict, nome_arquivo_saida='informante_afd_simples'):
-    dot = Digraph(comment='AFD Informante Simplificado')
-    dot.attr(rankdir='TD', labelloc='t', label='Autômato do Informante', fontsize='18',
-             nodesep='0.5', ranksep='0.7') 
+    Args:
+        automaton_data (dict): O dicionário que define o autômato.
+        graph_name (str): O nome do arquivo de saída para o grafo.
+    """
+    dot = graphviz.Digraph(comment=graph_name, graph_attr={'rankdir': 'LR', 'splines': 'spline'})
 
-    estados_finais_reais = ['ENCERRADO'] 
-    estados_de_processamento = [estado for estado, info in automato_dict.items() if info.get("action_handler") and not info.get("options")]
-    estados_geradores_opcoes = [estado for estado, info in automato_dict.items() if info.get("options_generator_handler")]
+    # Adicionar todos os estados como nós
+    for state_name in automaton_data.keys():
+        # Estados finais recebem formato de círculo duplo
+        if state_name == "ENCERRADO":
+            dot.node(state_name, state_name, shape='doublecircle', style='filled', fillcolor='lightcoral')
+        # Estado inicial recebe formato especial ou cor
+        elif state_name == "INICIAL":
+            dot.node(state_name, state_name, shape='Mdiamond', style='filled', fillcolor='lightblue')
+        # Outros estados normais
+        else:
+            dot.node(state_name, state_name)
 
-    # 1. Adicionar TODOS os nós
-    for estado_nome in automato_dict.keys():
-        label_no = estado_nome 
-        formato_no = 'ellipse' # Padrão para todos
-        cor_borda_no = 'black'
+    # Adicionar transições (arestas)
+    for state_name, state_info in automaton_data.items():
+        # Transições explícitas definidas no dicionário 'transitions'
+        if "transitions" in state_info and state_info["transitions"]:
+            for option, next_state in state_info["transitions"].items():
+                label = state_info["options"].get(option, f"Opção {option}")
+                dot.edge(state_name, next_state, label=label)
 
-        if estado_nome in estados_finais_reais:
-            formato_no = 'doublecircle'
-            
-        dot.node(estado_nome, label=label_no, shape=formato_no, color=cor_borda_no)
+        # Tratar transições implícitas por 'action_handler'
+        # No caso do Informante, PROCESSAR_ESCOLHA_PERGUNTA leva a EXIBINDO_RESPOSTA
+        if state_name == "PROCESSAR_ESCOLHA_PERGUNTA" and state_info.get("action_handler") == "handle_escolha_pergunta":
+            dot.edge(state_name, "EXIBINDO_RESPOSTA", label="Ação: Resposta Gerada")
 
-    # 2. Adicionar transições
-    for nome_estado_origem, info_estado_origem in automato_dict.items():
-        opcoes = info_estado_origem.get("options", {})
-        transicoes_definidas = info_estado_origem.get("transitions", {})
+        # Tratar transições implícitas por 'options_generator_handler'
+        # ESCOLHER_PERGUNTA gera opções que levam a PROCESSAR_ESCOLHA_PERGUNTA
+        if state_name == "ESCOLHER_PERGUNTA" and state_info.get("options_generator_handler") == "generate_informant_questions":
+            dot.edge(state_name, "PROCESSAR_ESCOLHA_PERGUNTA", label="Tópico de pergunta selecionado")
 
-        # A. Transições diretas baseadas nas 'options' do jogador
-        for chave_opcao, texto_opcao_completo in opcoes.items():
-            if chave_opcao in transicoes_definidas:
-                nome_estado_destino = transicoes_definidas[chave_opcao]
-                
-                label_aresta = texto_opcao_completo.replace("[", "").replace("]", "")
-                if "(" in label_aresta: label_aresta = label_aresta.split("(")[0].strip() # Remove ex: (Sair)
-                if not label_aresta: label_aresta = chave_opcao 
-                if len(label_aresta) > 25: label_aresta = label_aresta[:22] + "..."
+    # Renderizar o grafo
+    output_path = os.path.join(os.getcwd(), graph_name)
+    dot.render(output_path, format='png', view=True)
 
-
-                dot.edge(nome_estado_origem, nome_estado_destino, label=label_aresta, style="solid", color="black", fontsize="8")
-        
-        # B. Transições a partir de estados de 'action_handler' (seus resultados)
-        if nome_estado_origem in RESULTADOS_HANDLERS_INFORMANTE:
-            for label_resultado, destino_final in RESULTADOS_HANDLERS_INFORMANTE[nome_estado_origem].items():
-                dot.edge(nome_estado_origem, destino_final, label=label_resultado, style="solid", color="black", fontsize="8")
-
-        # C. Transição especial para 'options_generator_handler'
-        if nome_estado_origem == "ESCOLHER_PERGUNTA" and info_estado_origem.get("options_generator_handler"):
-            # Transição genérica para representar a escolha de um tópico da lista
-            # O destino é o estado que processa essa escolha.
-            dot.edge(nome_estado_origem, "PROCESSAR_ESCOLHA_PERGUNTA", label="Seleciona Tópico", style="solid", color="black", fontsize="8")
-
-
-    try:
-        dot.format = 'png'
-        output_path = dot.render(filename=nome_arquivo_saida, directory='.', cleanup=True)
-        print(f"Diagrama '{output_path}' gerado com sucesso.")
-        if platform.system() == 'Windows': os.startfile(output_path)
-        elif platform.system() == 'Darwin': os.system(f'open "{output_path}"')
-        else: os.system(f'xdg-open "{output_path}"')
-    except Exception as e:
-        print(f"Erro ao gerar ou abrir o diagrama: {e}")
-        # print("\n--- CÓDIGO DOT GERADO ---"); print(dot.source); print("--------------------------")
-
+# Chamar a função para gerar o grafo
 if __name__ == '__main__':
-    gerar_grafo_informante_simples(INFORMANTE_NPC_AUTOMATON)
+    generate_automaton_graph_informant(INFORMANTE_NPC_AUTOMATON)

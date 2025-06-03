@@ -1,0 +1,16 @@
+// npc_informante_afd
+digraph {
+	graph [rankdir=LR splines=spline]
+	INICIAL [label=INICIAL fillcolor=lightblue shape=Mdiamond style=filled]
+	ESCOLHER_PERGUNTA [label=ESCOLHER_PERGUNTA]
+	PROCESSAR_ESCOLHA_PERGUNTA [label=PROCESSAR_ESCOLHA_PERGUNTA]
+	EXIBINDO_RESPOSTA [label=EXIBINDO_RESPOSTA]
+	ENCERRADO [label=ENCERRADO fillcolor=lightcoral shape=doublecircle style=filled]
+	INICIAL -> ESCOLHER_PERGUNTA [label="Fazer uma pergunta"]
+	INICIAL -> ENCERRADO [label="Despedir-se"]
+	ESCOLHER_PERGUNTA -> ENCERRADO [label="Não tenho mais perguntas (Sair)"]
+	ESCOLHER_PERGUNTA -> PROCESSAR_ESCOLHA_PERGUNTA [label="Tópico de pergunta selecionado"]
+	PROCESSAR_ESCOLHA_PERGUNTA -> EXIBINDO_RESPOSTA [label="Ação: Resposta Gerada"]
+	EXIBINDO_RESPOSTA -> ESCOLHER_PERGUNTA [label="Fazer outra pergunta"]
+	EXIBINDO_RESPOSTA -> ENCERRADO [label="Entendido (Sair)"]
+}
