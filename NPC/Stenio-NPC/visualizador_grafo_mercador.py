@@ -1,191 +1,209 @@
-from graphviz import Digraph
+import graphviz
 import os
 import platform
 
-AFD_MERCADOR = {
+# O autômato do vendedor atualizado
+VENDEDOR_NPC_AUTOMATO = {
     "INICIAL": {
         "message": "Olá, aventureiro! Produtos frescos e de qualidade! O que deseja?",
         "options": {"1": "Comprar Itens", "2": "Vender Itens", "3": "Tentar Ameaçar", "4": "Despedir-se"},
         "transitions": {"1": "MENU_COMPRA_CATEGORIAS", "2": "MENU_VENDA_ESCOLHER_ITEM", "3": "PROCESSAR_AMEACA", "4": "FIM_DIALOGO"}
     },
-    "PROCESSAR_AMEACA": {"action_handler": "handle_ameaca", "message": "Você me ameaça?!", "options": {}, "transitions": {}}, # Será "pulado" no grafo
-    "FUGINDO": {"message": "SOCORRO! Um bandido!", "options": {"1": "[Continuar]"}, "transitions": {"1": "FIM_DIALOGO_NPC_AUSENTE"}},
-    "AMEACA_FRACASSADA": {"message": "Hah! Acha que me intimida?", "options": {"1": "[Sair da Loja]"}, "transitions": {"1": "FIM_DIALOGO"}},
+
+    "PROCESSAR_AMEACA": { "action_handler": "handle_ameaca", "message": "Você me ameaça?!", "options": {}, "transitions": {}},
+    "FUGINDO": {"message": "SOCORRO! Um bandido! Fujam para as colinas!", "options": {"1": "[Continuar]"}, "transitions": {"1": "FIM_DIALOGO_NPC_AUSENTE"}},
+    "AMEACA_FRACASSADA": {"message": "Hah! Acha que me intimida? Dê o fora da minha loja, seu verme!", "options": {"1": "[Sair da Loja]"}, "transitions": {"1": "FIM_DIALOGO"}},
+
     "MENU_COMPRA_CATEGORIAS": {
-        "message": "O que te interessa hoje?",
-        "options": {"1": "Poção", "2": "Espada", "3": "Voltar"},
+        "message": "O que te interessa hoje? Temos Poções e Equipamentos.",
+        "options": {
+            "1": "Poção (10g)",
+            "2": "Espada (50g)",
+            "3": "Voltar ao Menu Principal"
+        },
         "transitions": {"1": "DETALHES_ITEM_POCAO", "2": "DETALHES_ITEM_ESPADA", "3": "INICIAL"}
     },
     "DETALHES_ITEM_POCAO": {
-        "item_key": "pocao", "message": "Poção de Cura...",
-        "options": {"1": "Comprar", "2": "Negociar", "3": "Voltar"},
+        "item_key": "pocao",
+        "message": "Uma {item_nome}, restaura vida. Custa {preco_base}g. E então?",
+        "options": {"1": "Comprar por {preco_base}g", "2": "Tentar Negociar Preço", "3": "Voltar"},
         "transitions": {"1": "PROCESSAR_COMPRA_POCAO_BASE", "2": "NEGOCIANDO_PRECO_POCAO", "3": "MENU_COMPRA_CATEGORIAS"}
     },
     "DETALHES_ITEM_ESPADA": {
-        "item_key": "espada", "message": "Espada Curta...",
-        "options": {"1": "Comprar", "2": "Negociar", "3": "Voltar"}, # Adicionar NEGOCIANDO_PRECO_ESPADA se existir
+        "item_key": "espada",
+        "message": "Uma {item_nome}, confiável. Custa {preco_base}g. Leva?",
+        "options": {"1": "Comprar por {preco_base}g", "2": "Tentar Negociar Preço", "3": "Voltar"},
         "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_BASE", "2": "NEGOCIANDO_PRECO_ESPADA", "3": "MENU_COMPRA_CATEGORIAS"}
     },
     "NEGOCIANDO_PRECO_POCAO": {
-        "item_key": "pocao", "message": "Negociar, é?",
-        "options": {"1": "Insistir", "2": "Pagar Normal", "3": "Cancelar"},
+        "item_key": "pocao",
+        "message": "Negociar, é? Hmm... Sou todo ouvidos...",
+        "options": {"1": "Insistir (Persuadir)", "2": "Pagar {preco_base}g", "3": "Cancelar"},
         "transitions": {"1": "PROCESSAR_PERSUASAO_POCAO", "2": "PROCESSAR_COMPRA_POCAO_BASE", "3": "DETALHES_ITEM_POCAO"}
     },
-    "PROCESSAR_PERSUASAO_POCAO": {"item_key": "pocao", "action_handler": "handle_persuasao_desconto", "message": "Pensando...", "options": {}, "transitions": {}}, # Pulado
+    "PROCESSAR_PERSUASAO_POCAO": {"item_key": "pocao", "action_handler": "handle_persuasao_desconto", "message": "Deixe-me pensar...", "options": {}, "transitions": {}},
     "DESCONTO_OFERECIDO_POCAO": {
-        "item_key": "pocao", "message": "Poção com desconto!",
-        "options": {"1": "Aceitar Desconto", "2": "Recusar"},
+        "item_key": "pocao",
+        "message": "Sorte sua! {item_nome} por {preco_desconto}g. Aceita?",
+        "options": {"1": "Sim, levar por {preco_desconto}g!", "2": "Não, obrigado"},
         "transitions": {"1": "PROCESSAR_COMPRA_POCAO_DESCONTO", "2": "DETALHES_ITEM_POCAO"}
     },
     "NEGOCIACAO_FALHOU_POCAO": {
-        "item_key": "pocao", "message": "Preço firme.",
-        "options": {"1": "Pagar Normal", "2": "Deixar"},
+        "item_key": "pocao",
+        "message": "Desculpe. O preço da {item_nome} é {preco_base}g. Sem choro.",
+        "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
         "transitions": {"1": "PROCESSAR_COMPRA_POCAO_BASE", "2": "DETALHES_ITEM_POCAO"}
     },
-    "PROCESSAR_COMPRA_POCAO_BASE":    {"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 10, "message": "Verificando...", "options": {}, "transitions": {}}, # Pulado
-    "PROCESSAR_COMPRA_POCAO_DESCONTO":{"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 8,  "message": "Verificando...", "options": {}, "transitions": {}}, # Pulado
-    "PROCESSAR_COMPRA_ESPADA_BASE":   {"action_handler": "handle_tentativa_compra", "item_key": "espada", "preco_final_compra_jogador": 50, "message": "Verificando...", "options": {}, "transitions": {}}, # Pulado
-    
-    "COMPRA_SUCESSO": {"message": "Comprado!", "options": {"1": "Continuar", "2": "Menu Principal"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS", "2": "INICIAL"}},
-    "SEM_OURO": {"message": "Sem ouro.", "options": {"1": "Ok"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS"}},
-    "RECUSANDO_VENDA_ALEATORIA": {"message": "Hoje não!", "options": {"1": "Entendido"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS"}},
-    
+    # Novos estados para negociação de espada
+    "NEGOCIANDO_PRECO_ESPADA": {
+        "item_key": "espada",
+        "message": "Negociar o preço da {item_nome}, é? Sou todo ouvidos...",
+        "options": {"1": "Insistir por um preço melhor (Persuadir)", "2": "Ok, pagar {preco_base}g", "3": "Cancelar Negociação"},
+        "transitions": {"1": "PROCESSAR_PERSUASAO_ESPADA", "2": "PROCESSAR_COMPRA_ESPADA_BASE", "3": "DETALHES_ITEM_ESPADA"}
+    },
+    "PROCESSAR_PERSUASAO_ESPADA": {
+        "item_key": "espada",
+        "action_handler": "handle_persuasao_desconto",
+        "message": "Deixe-me pensar sobre o preço desta {item_nome}...",
+        "options": {},
+        "transitions": {}
+    },
+    "DESCONTO_OFERECIDO_ESPADA": {
+        "item_key": "espada",
+        "message": "É seu dia de sorte! Consigo fazer a {item_nome} por {preco_desconto}g para você. Aceita?",
+        "options": {"1": "Sim, levar por {preco_desconto}g!", "2": "Não, obrigado"},
+        "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_DESCONTO", "2": "DETALHES_ITEM_ESPADA"}
+    },
+    "NEGOCIACAO_FALHOU_ESPADA": {
+        "item_key": "espada",
+        "message": "Sinto muito. O preço da {item_nome} é {preco_base}g. Não posso baixar mais.",
+        "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
+        "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_BASE", "2": "DETALHES_ITEM_ESPADA"}
+    },
+    "PROCESSAR_COMPRA_ESPADA_DESCONTO":{ # NOVO ESTADO PARA COMPRA DA ESPADA COM DESCONTO
+        "action_handler": "handle_tentativa_compra", # Reutiliza o handler
+        "item_key": "espada",
+        "preco_final_compra_jogador": 40, # Definir o preço com desconto aqui (deve corresponder ao ITEM_DATA["espada"]["preco_desconto"])
+        "message": "Verificando seu ouro para a espada com desconto...",
+        "options": {},
+        "transitions": {} # O handler define a próxima transição
+    },
+
+    "PROCESSAR_COMPRA_POCAO_BASE":     {"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 10, "message": "Verificando seu ouro...", "options": {}, "transitions": {}},
+    "PROCESSAR_COMPRA_POCAO_DESCONTO":{"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 8,  "message": "Verificando seu ouro...", "options": {}, "transitions": {}},
+    "PROCESSAR_COMPRA_ESPADA_BASE":   {"action_handler": "handle_tentativa_compra", "item_key": "espada", "preco_final_compra_jogador": 50, "message": "Verificando seu ouro...", "options": {}, "transitions": {}},
+
+
+    "COMPRA_SUCESSO": {"message": "{item_nome} adicionado à mochila!", "options": {"1": "[Continuar Comprando]", "2": "[Menu Principal]"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS", "2": "INICIAL"}},
+    "SEM_OURO": {"message": "Você não tem ouro suficiente para {item_nome}.", "options": {"1": "[Ok]"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS"}},
+    "RECUSANDO_VENDA_ALEATORIA": {"message": "Hoje não estou vendendo {item_nome} para você!", "options": {"1": "[Entendido]"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS"}},
+
     "MENU_VENDA_ESCOLHER_ITEM": {
-        "message": "Vender algo?", "options_generator_handler": "generate_sell_options_for_player",
-        "options": {"9": "Voltar"}, "transitions": {"9": "INICIAL"} 
+        "message": "Quer me vender algo? O que você tem? (Mostrarei o que compro)",
+        "options_generator_handler": "generate_sell_options_for_player",
+        "options": {"9": "[Voltar ao Menu Principal]"},
+        "transitions": {"9": "INICIAL"}
     },
     "CONFIRMAR_VENDA_ITEM_GENERICO": {
-        "message": "Vender {item_nome}?", "options": {"1": "Sim", "2": "Não"},
+        "item_key": None,
+        "message": "Você tem {jogador_qtd} de {item_nome}. Eu pago {preco_npc_paga}g por cada. Vender um(a)?",
+        "options": {"1": "Sim, vender um(a)", "2": "Não, cancelar venda"},
         "transitions": {"1": "PROCESSAR_VENDA_ITEM", "2": "MENU_VENDA_ESCOLHER_ITEM"}
     },
-    "PROCESSAR_VENDA_ITEM": {"action_handler": "handle_tentativa_venda_jogador", "message": "Inspecionando...", "options": {}, "transitions": {}}, # Pulado
-    
-    "VENDA_SUCESSO": {"message": "Vendido!", "options": {"1": "Vender Mais", "2": "Menu Principal"}, "transitions": {"1": "MENU_VENDA_ESCOLHER_ITEM", "2": "INICIAL"}},
-    "VENDA_FALHOU_SEM_ITEM": {"message": "Sem item.", "options": {"1": "Ok"}, "transitions": {"1": "MENU_VENDA_ESCOLHER_ITEM"}},
-    "NPC_NAO_COMPRA_ITEM": {"message": "Não compro.", "options": {"1": "Ok"}, "transitions": {"1": "MENU_VENDA_ESCOLHER_ITEM"}},
-    
-    "FIM_DIALOGO": {"message": "Até mais!", "options": {}, "transitions": {}},
-    "FIM_DIALOGO_NPC_AUSENTE": {"message": "Ausente", "options": {}, "transitions": {}}
-}
-# --- FIM: Definição do SHOP_NPC_AUTOMATON ---
-
-
-# Mapeamento manual dos resultados dos action_handlers
-# Chave: nome do estado de processamento (com action_handler)
-# Valor: dicionário de {label_para_aresta_de_saida: estado_de_destino_real}
-RESULTADOS_DOS_HANDLERS = {
-    "PROCESSAR_AMEACA": {
-        "NPC Foge (chance)": "FUGINDO",
-        "Ameaça Falha (chance)": "AMEACA_FRACASSADA"
-    },
-    "PROCESSAR_PERSUASAO_POCAO": { # Adicionar para espada se tiver
-        "Desconto Aceito (chance)": "DESCONTO_OFERECIDO_POCAO",
-        "Desconto Negado (chance)": "NEGOCIACAO_FALHOU_POCAO"
-    },
-    # Para os PROCESSAR_COMPRA_X, o handler leva a 3 possíveis resultados
-    # Vamos criar uma chave genérica e tratar no loop, ou listar todos
-    "PROCESSAR_COMPRA_POCAO_BASE": { # Exemplo específico
-        "Compra OK": "COMPRA_SUCESSO",
-        "Sem Ouro": "SEM_OURO",
-        "Recusa Aleatória": "RECUSANDO_VENDA_ALEATORIA"
-    },
-    "PROCESSAR_COMPRA_POCAO_DESCONTO": {
-        "Compra OK": "COMPRA_SUCESSO",
-        "Sem Ouro": "SEM_OURO",
-        "Recusa Aleatória": "RECUSANDO_VENDA_ALEATORIA"
-    },
-    "PROCESSAR_COMPRA_ESPADA_BASE": { # Adicionar para espada com desconto
-        "Compra OK": "COMPRA_SUCESSO",
-        "Sem Ouro": "SEM_OURO",
-        "Recusa Aleatória": "RECUSANDO_VENDA_ALEATORIA"
-    },
     "PROCESSAR_VENDA_ITEM": {
-        "Venda OK": "VENDA_SUCESSO",
-        "Jogador Sem Item": "VENDA_FALHOU_SEM_ITEM",
-        "NPC Não Compra": "NPC_NAO_COMPRA_ITEM"
-    }
+        "action_handler": "handle_tentativa_venda_jogador",
+        "item_key": None,
+        "preco_npc_paga": None,
+        "message": "Deixe-me inspecionar isso...",
+        "options": {},
+        "transitions": {}
+    },
+    "VENDA_SUCESSO": {
+        "message": "{item_nome} vendido! Você recebeu {preco_npc_paga}g.",
+        "options": {"1": "[Vender Mais Itens]", "2": "[Menu Principal]"},
+        "transitions": {"1": "MENU_VENDA_ESCOLHER_ITEM", "2": "INICIAL"}
+    },
+    "VENDA_FALHOU_SEM_ITEM": {
+        "message": "Ué? Parece que você não tem mais {item_nome} para vender.",
+        "options": {"1": "[Ok]"},
+        "transitions": {"1": "MENU_VENDA_ESCOLHER_ITEM"}
+    },
+    "NPC_NAO_COMPRA_ITEM": {
+        "message": "Desculpe, não estou interessado em comprar {item_nome} no momento.",
+        "options": {"1": "[Ok]"},
+        "transitions": {"1": "MENU_VENDA_ESCOLHER_ITEM"}
+    },
+
+    "FIM_DIALOGO": {"message": "Até mais, aventureiro! E cuidado por ai.", "options": {}, "transitions": {}},
+    "FIM_DIALOGO_NPC_AUSENTE": {"message": "(O mercador não está mais aqui...)", "options": {}, "transitions": {}}
 }
 
+# ---
+def generate_automaton_graph(automaton_data, graph_name="npc_vendedor_afd"):
+    """
+    Gera um grafo de estados e transições a partir dos dados do autômato.
 
-def gerar_grafo_mercador_ultra_simplificado(automato_dict, nome_arquivo_saida='mercador_afd'):
-    dot = Digraph(comment='AFD Mercador')
-    dot.attr(rankdir='TD', label='Autômato do Mercador', fontsize='18', concentrate='true')
+    Args:
+        automaton_data (dict): O dicionário que define o autômato.
+        graph_name (str): O nome do arquivo de saída para o grafo.
+    """
+    dot = graphviz.Digraph(comment=graph_name, graph_attr={'rankdir': 'LR', 'splines': 'spline'}) # 'splines': 'spline' para arestas curvas
 
-    estados_de_processamento = [estado for estado, info in automato_dict.items() if info.get("action_handler")]
-    
-    # Estados que efetivamente terminam o diálogo ou um fluxo importante
-    estados_finais_visuais = [
-        'FIM_DIALOGO', 'FIM_DIALOGO_NPC_AUSENTE', 'FUGINDO', 'AMEACA_FRACASSADA',
-        'COMPRA_SUCESSO', 'SEM_OURO', 'RECUSANDO_VENDA_ALEATORIA',
-        'VENDA_SUCESSO', 'VENDA_FALHOU_SEM_ITEM', 'NPC_NAO_COMPRA_ITEM'
-    ]
+    # Adicionar todos os estados como nós
+    for state_name in automaton_data.keys():
+        # Estados finais recebem formato de círculo duplo
+        if state_name in ["FIM_DIALOGO", "FIM_DIALOGO_NPC_AUSENTE"]:
+            dot.node(state_name, state_name, shape='doublecircle', style='filled', fillcolor='lightcoral')
+        # Estado inicial recebe formato especial ou cor
+        elif state_name == "INICIAL":
+            dot.node(state_name, state_name, shape='Mdiamond', style='filled', fillcolor='lightblue')
+        # Novos estados da negociação da espada podem ser destacados
+        elif state_name in ["NEGOCIANDO_PRECO_ESPADA", "PROCESSAR_PERSUASAO_ESPADA",
+                            "DESCONTO_OFERECIDO_ESPADA", "NEGOCIACAO_FALHOU_ESPADA",
+                            "PROCESSAR_COMPRA_ESPADA_DESCONTO"]:
+            dot.node(state_name, state_name)
+        # Outros estados normais
+        else:
+            dot.node(state_name, state_name)
 
-    # 1. Adicionar apenas nós que NÃO são de processamento puro
-    for estado_nome, info_estado in automato_dict.items():
-        if estado_nome not in estados_de_processamento:
-            label_no = estado_nome
-            formato_no = 'ellipse'
-            if estado_nome in estados_finais_visuais: # Estiliza como "final" visualmente
-                formato_no = 'doublecircle'
-            elif estado_nome == 'INICIAL':
-                 formato_no = 'ellipse' # Pode dar um estilo especial se quiser
-            
-            dot.node(estado_nome, label=label_no, shape=formato_no)
+    # Adicionar transições (arestas)
+    for state_name, state_info in automaton_data.items():
+        # Transições explícitas definidas no dicionário 'transitions'
+        if "transitions" in state_info and state_info["transitions"]:
+            for option, next_state in state_info["transitions"].items():
+                label = state_info["options"].get(option, f"Opção {option}")
+                dot.edge(state_name, next_state, label=label)
 
-    # 2. Adicionar transições, pulando os estados de processamento
-    for nome_estado_origem, info_estado_origem in automato_dict.items():
-        # Não desenha transições partindo de estados de processamento (eles serão pulados)
-        if nome_estado_origem in estados_de_processamento:
-            continue
+        # Tratar transições implícitas por 'action_handler'
+        # As transições aqui são baseadas nas possíveis saídas que discutimos
+        if "action_handler" in state_info and not state_info["transitions"]:
+            if state_name == "PROCESSAR_AMEACA":
+                dot.edge(state_name, "FUGINDO", label="Ação: Sucesso Ameaça")
+                dot.edge(state_name, "AMEACA_FRACASSADA", label="Ação: Falha Ameaça")
+            elif state_name == "PROCESSAR_PERSUASAO_POCAO":
+                dot.edge(state_name, "DESCONTO_OFERECIDO_POCAO", label="Ação: Persuasão Sucesso")
+                dot.edge(state_name, "NEGOCIACAO_FALHOU_POCAO", label="Ação: Persuasão Falha")
+            elif state_name == "PROCESSAR_PERSUASAO_ESPADA": # NOVO HANDLER DA ESPADA
+                dot.edge(state_name, "DESCONTO_OFERECIDO_ESPADA", label="Ação: Persuasão Sucesso")
+                dot.edge(state_name, "NEGOCIACAO_FALHOU_ESPADA", label="Ação: Persuasão Falha")
+            elif state_name in ["PROCESSAR_COMPRA_POCAO_BASE", "PROCESSAR_COMPRA_POCAO_DESCONTO",
+                                "PROCESSAR_COMPRA_ESPADA_BASE", "PROCESSAR_COMPRA_ESPADA_DESCONTO"]: # Incluindo o novo estado
+                dot.edge(state_name, "COMPRA_SUCESSO", label="Ação: Compra Sucesso")
+                dot.edge(state_name, "SEM_OURO", label="Ação: Sem Ouro")
+                dot.edge(state_name, "RECUSANDO_VENDA_ALEATORIA", label="Ação: NPC Recusa Venda")
+            elif state_name == "PROCESSAR_VENDA_ITEM":
+                dot.edge(state_name, "VENDA_SUCESSO", label="Ação: Venda Sucesso")
+                dot.edge(state_name, "VENDA_FALHOU_SEM_ITEM", label="Ação: Sem Item")
+                dot.edge(state_name, "NPC_NAO_COMPRA_ITEM", label="Ação: NPC Não Compra")
 
-        opcoes = info_estado_origem.get("options", {})
-        transicoes_definidas = info_estado_origem.get("transitions", {})
+        # Tratar transições implícitas por 'options_generator_handler'
+        if "options_generator_handler" in state_info:
+            if state_name == "MENU_VENDA_ESCOLHER_ITEM":
+                dot.edge(state_name, "CONFIRMAR_VENDA_ITEM_GENERICO", label="Item do jogador selecionado")
 
-        # Transições normais (definidas por 'options' do jogador)
-        for chave_opcao, texto_opcao_completo in opcoes.items():
-            if chave_opcao in transicoes_definidas:
-                destino_imediato = transicoes_definidas[chave_opcao]
-                
-                # Simplifica o label da aresta
-                palavras_opcao = texto_opcao_completo.replace("[", "").replace("]", "").split(" ")
-                label_aresta = palavras_opcao[0] if palavras_opcao else chave_opcao
-                if len(palavras_opcao) > 1 and len(label_aresta) < 6 : label_aresta += " " + palavras_opcao[1]
-                if "Voltar" in texto_opcao_completo or "Sair" in texto_opcao_completo or "Cancelar" in texto_opcao_completo:
-                    label_aresta = texto_opcao_completo
-                if "(" in label_aresta: label_aresta = label_aresta.split("(")[0].strip()
+    # Renderizar o grafo
+    output_path = os.path.join(os.getcwd(), graph_name)
+    dot.render(output_path, format='png', view=True)
 
-
-                if destino_imediato in estados_de_processamento:
-                    # Se o destino é um estado de processamento, pega os resultados desse handler
-                    if destino_imediato in RESULTADOS_DOS_HANDLERS:
-                        for label_resultado, destino_final in RESULTADOS_DOS_HANDLERS[destino_imediato].items():
-                            # Aresta do estado original para o resultado final do handler
-                            # O label combina a escolha do jogador com o resultado do handler
-                            dot.edge(nome_estado_origem, destino_final, label=f"{label_aresta}\n({label_resultado})", style="solid") # Solid, mas poderia ser dashed
-                    else:
-                        # Handler sem resultados mapeados, apenas ignora o estado de processamento (não ideal)
-                        # Ou desenha uma aresta para ele se ele não for removido (mas queremos remover)
-                        pass
-                elif destino_imediato not in estados_de_processamento:
-                    # Transição direta para um estado não-processamento
-                    dot.edge(nome_estado_origem, destino_imediato, label=label_aresta, style="solid")
-        
-        # Lidar com options_generator_handler (MENU_VENDA_ESCOLHER_ITEM)
-        if nome_estado_origem == "MENU_VENDA_ESCOLHER_ITEM" and info_estado_origem.get("options_generator_handler"):
-            # Mostra uma transição genérica para o estado de confirmação
-            # Este estado CONFIRMAR_VENDA_ITEM_GENERICO não é de processamento, então será um nó.
-            dot.edge(nome_estado_origem, "CONFIRMAR_VENDA_ITEM_GENERICO", label="Seleciona Item P/ Venda", style="solid")
-
-
-    try:
-        dot.format = 'png'
-        output_path = dot.render(filename=nome_arquivo_saida, directory='.', cleanup=True)
-        print(f"Diagrama '{output_path}' gerado com sucesso.")
-        if platform.system() == 'Windows': os.startfile(output_path)
-        elif platform.system() == 'Darwin': os.system(f'open "{output_path}"')
-        else: os.system(f'xdg-open "{output_path}"')
-    except Exception as e:
-        print(f"Erro ao gerar ou abrir o diagrama: {e}")
-       
-if __name__ == '__main__':
-    gerar_grafo_mercador_ultra_simplificado(AFD_MERCADOR)
+# Chamar a função para gerar o grafo com o autômato atualizado
+generate_automaton_graph(VENDEDOR_NPC_AUTOMATO)

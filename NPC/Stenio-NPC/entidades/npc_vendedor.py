@@ -1,13 +1,13 @@
 import random 
 from .npc_base import NPCBase
-from automatos.shop_npc_automaton import SHOP_NPC_AUTOMATON
+from automatos.vendedor_npc_automato import VENDEDOR_NPC_AUTOMATO
 from core.config import COLOR_SHOP_NPC
 from core.config import ITEM_DATA
 
 class NPCVendedor(NPCBase):
     def __init__(self, x, y, label="L"):
         super().__init__(x, y, npc_type="shop", label=label, color=COLOR_SHOP_NPC)
-        self.automaton = SHOP_NPC_AUTOMATON
+        self.automaton = VENDEDOR_NPC_AUTOMATO
 
         self.chance_recusar_venda_aleatoria = 0.1 
         self.chance_conceder_desconto_persuasao = 0.6 

@@ -1,9 +1,9 @@
 
-SHOP_NPC_AUTOMATON = {
+VENDEDOR_NPC_AUTOMATO = {
     "INICIAL": {
         "message": "Olá, aventureiro! Produtos frescos e de qualidade! O que deseja?",
         "options": {"1": "Comprar Itens", "2": "Vender Itens", "3": "Tentar Ameaçar", "4": "Despedir-se"},
-        "transitions": {"1": "MENU_COMPRA_CATEGORIAS", "2": "MENU_VENDA_ESCOLHER_ITEM", "3": "PROCESSAR_AMEACA", "4": "FIM_DIALOGO"} # Mudou para MENU_VENDA_ESCOLHER_ITEM
+        "transitions": {"1": "MENU_COMPRA_CATEGORIAS", "2": "MENU_VENDA_ESCOLHER_ITEM", "3": "PROCESSAR_AMEACA", "4": "FIM_DIALOGO"}
     },
 
 
@@ -30,7 +30,7 @@ SHOP_NPC_AUTOMATON = {
         "item_key": "espada",
         "message": "Uma {item_nome}, confiável. Custa {preco_base}g. Leva?", 
         "options": {"1": "Comprar por {preco_base}g", "2": "Tentar Negociar Preço", "3": "Voltar"},
-        "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_BASE", "2": "NEGOCIANDO_PRECO_ESPADA", "3": "MENU_COMPRA_CATEGORIAS"} # Adicionar NEGOCIANDO_PRECO_ESPADA se quiser
+        "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_BASE", "2": "NEGOCIANDO_PRECO_ESPADA", "3": "MENU_COMPRA_CATEGORIAS"}
     },
     "NEGOCIANDO_PRECO_POCAO": {
         "item_key": "pocao",
@@ -41,7 +41,7 @@ SHOP_NPC_AUTOMATON = {
     "PROCESSAR_PERSUASAO_POCAO": {"item_key": "pocao", "action_handler": "handle_persuasao_desconto", "message": "Deixe-me pensar...", "options": {}, "transitions": {}},
     "DESCONTO_OFERECIDO_POCAO": {
         "item_key": "pocao",
-        "message": "Sorte sua! {item_nome} por {preco_desconto}g. Aceita?", # Formatada
+        "message": "Sorte sua! {item_nome} por {preco_desconto}g. Aceita?", 
         "options": {"1": "Sim, levar por {preco_desconto}g!", "2": "Não, obrigado"},
         "transitions": {"1": "PROCESSAR_COMPRA_POCAO_DESCONTO", "2": "DETALHES_ITEM_POCAO"}
     },
@@ -51,9 +51,46 @@ SHOP_NPC_AUTOMATON = {
         "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
         "transitions": {"1": "PROCESSAR_COMPRA_POCAO_BASE", "2": "DETALHES_ITEM_POCAO"}
     },
+    #Apagar aqui
+    "NEGOCIANDO_PRECO_ESPADA": {
+        "item_key": "espada",
+        "message": "Negociar o preço da {item_nome}, é? Sou todo ouvidos...",
+        "options": {"1": "Insistir por um preço melhor (Persuadir)", "2": "Ok, pagar {preco_base}g", "3": "Cancelar Negociação"},
+        "transitions": {"1": "PROCESSAR_PERSUASAO_ESPADA", "2": "PROCESSAR_COMPRA_ESPADA_BASE", "3": "DETALHES_ITEM_ESPADA"}
+    },
+    "PROCESSAR_PERSUASAO_ESPADA": {
+        "item_key": "espada",
+        "action_handler": "handle_persuasao_desconto",
+        "message": "Deixe-me pensar sobre o preço desta {item_nome}...",
+        "options": {},
+        "transitions": {}
+    },
+    "DESCONTO_OFERECIDO_ESPADA": {
+        "item_key": "espada",
+        "message": "É seu dia de sorte! Consigo fazer a {item_nome} por {preco_desconto}g para você. Aceita?",
+        "options": {"1": "Sim, levar por {preco_desconto}g!", "2": "Não, obrigado"},
+        "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_DESCONTO", "2": "DETALHES_ITEM_ESPADA"}
+    },
+    "NEGOCIACAO_FALHOU_ESPADA": {
+        "item_key": "espada",
+        "message": "Sinto muito. O preço da {item_nome} é {preco_base}g. Não posso baixar mais.",
+        "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
+        "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_BASE", "2": "DETALHES_ITEM_ESPADA"}
+    },
+    #Apagar aqui
     "PROCESSAR_COMPRA_POCAO_BASE":    {"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 10, "message": "Verificando seu ouro...", "options": {}, "transitions": {}},
     "PROCESSAR_COMPRA_POCAO_DESCONTO":{"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 8,  "message": "Verificando seu ouro...", "options": {}, "transitions": {}}, 
     "PROCESSAR_COMPRA_ESPADA_BASE":   {"action_handler": "handle_tentativa_compra", "item_key": "espada", "preco_final_compra_jogador": 50, "message": "Verificando seu ouro...", "options": {}, "transitions": {}}, 
+
+    #Apagar aqui
+     "PROCESSAR_COMPRA_ESPADA_DESCONTO":{ # NOVO ESTADO PARA COMPRA DA ESPADA COM DESCONTO
+        "action_handler": "handle_tentativa_compra", # Reutiliza o handler
+        "item_key": "espada",
+        "preco_final_compra_jogador": 40, # Definir o preço com desconto aqui (deve corresponder ao ITEM_DATA["espada"]["preco_desconto"])
+        "message": "Verificando seu ouro para a espada com desconto...",
+        "options": {},
+        "transitions": {} # O handler define a próxima transição
+    },
 
     "COMPRA_SUCESSO": {"message": "{item_nome} adicionado à mochila!", "options": {"1": "[Continuar Comprando]", "2": "[Menu Principal]"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS", "2": "INICIAL"}},
     "SEM_OURO": {"message": "Você não tem ouro suficiente para {item_nome}.", "options": {"1": "[Ok]"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS"}}, 
