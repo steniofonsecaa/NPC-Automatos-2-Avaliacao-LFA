@@ -16,7 +16,7 @@ for npc_nome in npcs:
         dot = Digraph(comment=f'AFD/AFN/AP {nome_npc}')
         for estado in estados:
             shape = 'ellipse'
-            if estado.lower() in ['concluindo', 'encerrado', 'fugindo', 'recusandovenda', 'sucessoforja', 'falhaforja','sair']:
+            if estado.lower() in ['concluindo', 'encerrado', 'fugindo', 'recusandovenda', 'sucessoforja', 'falhaforja','sair','concluindovenda']:
                 shape = 'doublecircle'
             dot.node(estado, shape=shape)
 

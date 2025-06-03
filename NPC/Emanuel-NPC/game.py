@@ -261,7 +261,7 @@ class NPC:
                 if perguntas:
                     self.dialogue_message = "Voce perguntou sobre: " + ", ".join(perguntas)
                 else:
-                    self.dialogue_message = "voce não perguntou nada."
+                    self.dialogue_message = "voce nao perguntou nada."
 
         else:
             # Caso padrão (Mercador ou Ferreiro)

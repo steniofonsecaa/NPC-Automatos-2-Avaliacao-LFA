@@ -30,12 +30,12 @@ respostas_perguntas = {
     'cidades antigas': "As cidades antigas foram destruídas em uma grande guerra.",
     'guildas': "As guildas controlam o comercio e os contratos de mercenarios.",
     'reino perdido': "O Reino Perdido e uma lenda... ou talvez não.",
-    'animais magicos': "Dizem que animais magicos podem ser encontrados nas montanhas.",
+    'animais': "Dizem que animais magicos podem ser encontrados nas montanhas.",
     'lendas antigas': "As lendas antigas são passadas de geracão em geracão.",
     'rituais secretos': "Existem rituais que apenas os sabios conhecem.",
     'a origem da magia': "Ninguem sabe ao certo como a magia surgiu neste mundo.",
     'os guardioes do tempo': "Poucos ouviram falar dos Guardiões do Tempo, seres que vigiam as linhas temporais.",
-    'armas lendarias': "Armas lendarias são forjadas com materiais raros e encantamentos poderosos.",
+    'armas': "Armas lendarias são forjadas com materiais raros e encantamentos poderosos.",
     'portais misticos': "Os portais místicos conectam reinos distantes, mas são perigosos de usar."
 }
 
@@ -49,7 +49,7 @@ perguntas_possiveis = [
     #"lendas antigas", "rituais secretos", "a origem da magia", "os guardiões do tempo",
    # "armas lendarias", "portais místicos"
     "cidade", "castelo", "monstros", "historia", "lendas" #Versão Simplificada (não tinha tecla o suficiente pra ter todas acima)
-    , "animais magicos", "armas lendarias"
+    , "animais", "armas"
 
 ]
 
