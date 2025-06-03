@@ -2,9 +2,8 @@ import graphviz
 import os
 import platform
 
-# A definição COMPLETA e MAIS ATUAL do seu FERREIRO_NPC
 FERREIRO_NPC = {
-    "INICIAL": { # Equivalente a 'Esperando'
+    "INICIAL": {
         "message": "Sou Férgus, o ferreiro. Posso sentir o aço em suas veias. Do que precisa?",
         "options": {
             "1": "Serviços de Forja",
@@ -33,7 +32,7 @@ FERREIRO_NPC = {
     "RECURSOS_INSUFICIENTES_MELHORIA": {
         "message": "Você não possui todo o ouro ou materiais necessários para melhorar {item_nome}.",
         "options": {"1": "[Entendido]"},
-        "transitions": {"1": "ESCOLHER_ITEM_MELHORIA"} # Corrigido para voltar à escolha, não encerrar
+        "transitions": {"1": "ESCOLHER_ITEM_MELHORIA"}
     },
 
     # --- Fluxo de Forjar Nova Arma ---
@@ -148,13 +147,6 @@ RESULTADOS_HANDLERS_FERREIRO = {
 }
 
 def generate_automaton_graph_ferreiro(automaton_data, graph_name="npc_ferreiro_afd"):
-    """
-    Gera um grafo de estados e transições a partir dos dados do autômato do Ferreiro.
-
-    Args:
-        automaton_data (dict): O dicionário que define o autômato.
-        graph_name (str): O nome do arquivo de saída para o grafo.
-    """
     dot = graphviz.Digraph(comment=graph_name, graph_attr={'rankdir': 'LR', 'splines': 'spline'})
 
     # Adicionar todos os estados como nós
@@ -202,6 +194,5 @@ def generate_automaton_graph_ferreiro(automaton_data, graph_name="npc_ferreiro_a
         print("Certifique-se de que o Graphviz está instalado e configurado corretamente.")
         print(f"Output path tentado: {output_path}")
 
-# Chamar a função para gerar o grafo
 if __name__ == '__main__':
     generate_automaton_graph_ferreiro(FERREIRO_NPC)

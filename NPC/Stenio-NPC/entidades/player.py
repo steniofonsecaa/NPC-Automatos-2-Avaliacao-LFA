@@ -1,8 +1,7 @@
-# npc_rpg/entities/player.py
 import pyxel
 import random
 from core.config import TILE_SIZE, COLOR_PLAYER
-from core.map_utils import is_blocked # Importa a função
+from core.map_utils import is_blocked 
 
 class Player:
     def __init__(self, start_x=40, start_y=40):
@@ -19,7 +18,7 @@ class Player:
             "espada": 0
         }
 
-    def update(self, blocked_npc_pixel_positions): # Parâmetro atualizado
+    def update(self, blocked_npc_pixel_positions):
         dx = dy = 0
         if pyxel.btn(pyxel.KEY_LEFT): dx = -1
         if pyxel.btn(pyxel.KEY_RIGHT): dx = 1

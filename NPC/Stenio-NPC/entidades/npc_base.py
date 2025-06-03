@@ -2,7 +2,7 @@ import pyxel
 from core.config import TILE_SIZE, ITEM_DATA
 
 
-class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módulo chamado npc
+class NPCBase: 
     def __init__(self, x, y, npc_type, label, color):
         self.x = x
         self.y = y
@@ -10,7 +10,7 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
         self.label = label   # e.g., "L", "I", "F"
         self.color = color
 
-        self.automaton = None # Será definido pela subclasse
+        self.automaton = None 
         self.is_dialogue_active = False
         self.dialogue_state = None
         self.dialogue_message = ""
@@ -23,9 +23,9 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
 
     def draw(self):
         pyxel.rect(self.x, self.y, TILE_SIZE, TILE_SIZE, self.color)
-        pyxel.text(self.x + 2, self.y + 2, self.label, 0) # Cor do texto do label
+        pyxel.text(self.x + 2, self.y + 2, self.label, 0) 
 
-    def get_pixel_pos(self): # Posição em pixels, útil para colisões e outras lógicas
+    def get_pixel_pos(self):
         return self.x, self.y
 
     def start_dialogue(self, player_obj):
@@ -60,10 +60,10 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
             return
 
         # 1. Lidar com a mensagem do estado
-        if not self._message_is_final_from_handler: # Se a msg NÃO foi finalizada por um handler
+        if not self._message_is_final_from_handler:
             raw_message = state_info.get("message", "...")
             
-            item_key_para_formatacao = None # Inicializa explicitamente como None
+            item_key_para_formatacao = None 
             
             state_defined_item_key = state_info.get("item_key")
             if state_defined_item_key:
@@ -91,12 +91,12 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
                     try:
                         formatted_message = raw_message.format(
                             item_nome=item_config.get("nome_exibicao", item_key_para_formatacao),
-                            preco_base=item_config.get("preco_venda_jogador_paga_npc", "N/A"), # Ajustado para compra
-                            preco_desconto=item_config.get("preco_desconto", "N/A"), # Ajustado para compra
-                            preco_npc_paga=item_config.get("preco_npc_paga_jogador", "N/A"), # Para venda
+                            preco_base=item_config.get("preco_venda_jogador_paga_npc", "N/A"),
+                            preco_desconto=item_config.get("preco_desconto", "N/A"), 
+                            preco_npc_paga=item_config.get("preco_npc_paga_jogador", "N/A"), 
                             jogador_qtd=player_qty_str,
-                            custo_melhoria_ouro=item_config.get("custo_melhoria_ouro", "N/A"), # NOVO
-                            materiais_melhoria=materiais_str # NOVO
+                            custo_melhoria_ouro=item_config.get("custo_melhoria_ouro", "N/A"),
+                            materiais_melhoria=materiais_str
                         )
                     except KeyError as e:
                         print(f"DEBUG: Erro ao formatar msg (template) para '{self.dialogue_state}'. Placeholder: {e}")
@@ -106,7 +106,6 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
             
             self.dialogue_message = formatted_message
         else:
-            # A mensagem já foi definida pelo handler, apenas reseta a flag para a próxima vez que _update_dialogue_content for chamado para um NOVO estado.
             self._message_is_final_from_handler = False
 
         # 2. Montar as opções para o jogador (lógica como antes)
@@ -209,7 +208,7 @@ class NPCBase: # Renomeado para NPCBase para evitar conflito se houver um módul
 
         
         if next_state_key in ["INICIAL", "MENU_COMPRA_CATEGORIAS", "MENU_VENDA_ESCOLHER_ITEM", 
-                              "OFERECENDO_SERVICO", # Adicionado
+                              "OFERECENDO_SERVICO",
                               "FIM_DIALOGO", "FIM_DIALOGO_NPC_AUSENTE", "ENCERRADO"]:
             self.active_transaction_item_key = None
             if hasattr(self, '_temp_sell_option_map'): self._temp_sell_option_map.clear()

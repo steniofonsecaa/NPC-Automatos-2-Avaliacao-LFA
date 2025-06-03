@@ -51,7 +51,6 @@ VENDEDOR_NPC_AUTOMATO = {
         "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
         "transitions": {"1": "PROCESSAR_COMPRA_POCAO_BASE", "2": "DETALHES_ITEM_POCAO"}
     },
-    #Apagar aqui
     "NEGOCIANDO_PRECO_ESPADA": {
         "item_key": "espada",
         "message": "Negociar o preço da {item_nome}, é? Sou todo ouvidos...",
@@ -77,19 +76,17 @@ VENDEDOR_NPC_AUTOMATO = {
         "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
         "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_BASE", "2": "DETALHES_ITEM_ESPADA"}
     },
-    #Apagar aqui
     "PROCESSAR_COMPRA_POCAO_BASE":    {"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 10, "message": "Verificando seu ouro...", "options": {}, "transitions": {}},
     "PROCESSAR_COMPRA_POCAO_DESCONTO":{"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 8,  "message": "Verificando seu ouro...", "options": {}, "transitions": {}}, 
     "PROCESSAR_COMPRA_ESPADA_BASE":   {"action_handler": "handle_tentativa_compra", "item_key": "espada", "preco_final_compra_jogador": 50, "message": "Verificando seu ouro...", "options": {}, "transitions": {}}, 
 
-    #Apagar aqui
-     "PROCESSAR_COMPRA_ESPADA_DESCONTO":{ # NOVO ESTADO PARA COMPRA DA ESPADA COM DESCONTO
-        "action_handler": "handle_tentativa_compra", # Reutiliza o handler
+     "PROCESSAR_COMPRA_ESPADA_DESCONTO":{
+        "action_handler": "handle_tentativa_compra", 
         "item_key": "espada",
-        "preco_final_compra_jogador": 40, # Definir o preço com desconto aqui (deve corresponder ao ITEM_DATA["espada"]["preco_desconto"])
+        "preco_final_compra_jogador": 40, 
         "message": "Verificando seu ouro para a espada com desconto...",
         "options": {},
-        "transitions": {} # O handler define a próxima transição
+        "transitions": {} 
     },
 
     "COMPRA_SUCESSO": {"message": "{item_nome} adicionado à mochila!", "options": {"1": "[Continuar Comprando]", "2": "[Menu Principal]"}, "transitions": {"1": "MENU_COMPRA_CATEGORIAS", "2": "INICIAL"}},

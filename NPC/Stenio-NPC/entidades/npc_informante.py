@@ -34,7 +34,7 @@ class NPCInformante(NPCBase):
             self.dialogue_options_display.append(f"[{option_key_str}] Sobre: {display_text}")
             self._temp_question_option_map[option_key_str] = topic_key
             
-            if question_option_count >= 8: # Permite opções de 1 a 8
+            if question_option_count >= 8: 
                 break 
         
         if question_option_count == 0:

@@ -1,11 +1,10 @@
-# npc_rpg/entities/npc_ferreiro.py
 import random
 from .npc_base import NPCBase
 from automatos.ferreiro_npc_automato import FERREIRO_NPC
 from core.config import COLOR_FORGE_NPC, ITEM_DATA
 
 class NPCFerreiro(NPCBase):
-    def __init__(self, x, y, label="F"): # 'F' para Ferreiro
+    def __init__(self, x, y, label="F"):
         super().__init__(x, y, npc_type="forge", label=label, color=COLOR_FORGE_NPC)
         self.automaton = FERREIRO_NPC
 
@@ -29,7 +28,6 @@ class NPCFerreiro(NPCBase):
         elif rand_num < self.chance_aceitar_forja_direto + self.chance_negociar_preco_forja:
             self.dialogue_state = "NEGOCIANDO_PRECO_FORJA"
         else:
-            # Ferreiro recusa o serviço.
             self.dialogue_state = "RECUSANDO_SERVICO_GERAL"
     
         self._message_is_final_from_handler = False
@@ -149,7 +147,7 @@ class NPCFerreiro(NPCBase):
         if random.random() < self.chance_sucesso_trabalho:
             self.dialogue_state = "SUCESSO_FORJA_MELHORIA_DESAFIO"
             self.dialogue_message = f"Consegui! Sua {item_nome_exibicao} foi aprimorada com maestria!"
-            print(f"DEBUG: {item_nome_exibicao} melhorada para o jogador (lógica de upgrade real a ser implementada).")
+            # print(f"DEBUG: {item_nome_exibicao} melhorada para o jogador (lógica de upgrade real a ser implementada).")
         else:
             self.dialogue_state = "FALHA_FORJA_MELHORIA_DESAFIO"
             self.dialogue_message = f"Maldição! A melhoria da sua {item_nome_exibicao} falhou. Os materiais foram perdidos, mas seu equipamento está intacto."
@@ -172,7 +170,6 @@ class NPCFerreiro(NPCBase):
             self.dialogue_message = "Você luta bem! Admito a derrota. É forte como meu aço!"
             print(f"DEBUG: Jogador venceu o desafio contra o Ferreiro.")
         else:
-            # Jogador perdeu o desafio
             self.dialogue_state = "FALHA_FORJA_MELHORIA_DESAFIO"
             self.dialogue_message = "Hah! Precisa de mais treino para superar minhas habilidades! Volte quando for mais forte."
             print(f"DEBUG: Jogador perdeu o desafio contra o Ferreiro.")

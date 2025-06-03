@@ -93,8 +93,8 @@ class NPCVendedor(NPCBase):
             self.dialogue_message = f"Ah, que pena. Você precisa de {preco_final}g para {item_nome_exibicao}, mas só tem {self.player_in_dialogue.gold}g."
 
     def generate_sell_options_for_player(self):
-        self.dialogue_options_display = [] # Limpa para novas opções
-        self._temp_sell_option_map = {}    # Limpa o mapa temporário
+        self.dialogue_options_display = [] 
+        self._temp_sell_option_map = {}
         
         if not self.player_in_dialogue:
             current_state_info = self.automaton.get(self.dialogue_state, {})

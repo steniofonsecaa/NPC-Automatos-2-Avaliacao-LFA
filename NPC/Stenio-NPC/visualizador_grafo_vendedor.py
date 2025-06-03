@@ -2,7 +2,6 @@ import graphviz
 import os
 import platform
 
-# O autômato do vendedor atualizado
 VENDEDOR_NPC_AUTOMATO = {
     "INICIAL": {
         "message": "Olá, aventureiro! Produtos frescos e de qualidade! O que deseja?",
@@ -54,7 +53,7 @@ VENDEDOR_NPC_AUTOMATO = {
         "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
         "transitions": {"1": "PROCESSAR_COMPRA_POCAO_BASE", "2": "DETALHES_ITEM_POCAO"}
     },
-    # Novos estados para negociação de espada
+
     "NEGOCIANDO_PRECO_ESPADA": {
         "item_key": "espada",
         "message": "Negociar o preço da {item_nome}, é? Sou todo ouvidos...",
@@ -80,13 +79,13 @@ VENDEDOR_NPC_AUTOMATO = {
         "options": {"1": "Ok, pagar {preco_base}g", "2": "Deixar pra lá"},
         "transitions": {"1": "PROCESSAR_COMPRA_ESPADA_BASE", "2": "DETALHES_ITEM_ESPADA"}
     },
-    "PROCESSAR_COMPRA_ESPADA_DESCONTO":{ # NOVO ESTADO PARA COMPRA DA ESPADA COM DESCONTO
-        "action_handler": "handle_tentativa_compra", # Reutiliza o handler
+    "PROCESSAR_COMPRA_ESPADA_DESCONTO":{ 
+        "action_handler": "handle_tentativa_compra", 
         "item_key": "espada",
-        "preco_final_compra_jogador": 40, # Definir o preço com desconto aqui (deve corresponder ao ITEM_DATA["espada"]["preco_desconto"])
+        "preco_final_compra_jogador": 40,
         "message": "Verificando seu ouro para a espada com desconto...",
         "options": {},
-        "transitions": {} # O handler define a próxima transição
+        "transitions": {}
     },
 
     "PROCESSAR_COMPRA_POCAO_BASE":     {"action_handler": "handle_tentativa_compra", "item_key": "pocao",  "preco_final_compra_jogador": 10, "message": "Verificando seu ouro...", "options": {}, "transitions": {}},
@@ -138,16 +137,9 @@ VENDEDOR_NPC_AUTOMATO = {
     "FIM_DIALOGO_NPC_AUSENTE": {"message": "(O mercador não está mais aqui...)", "options": {}, "transitions": {}}
 }
 
-# ---
 def generate_automaton_graph(automaton_data, graph_name="npc_vendedor_afd"):
-    """
-    Gera um grafo de estados e transições a partir dos dados do autômato.
 
-    Args:
-        automaton_data (dict): O dicionário que define o autômato.
-        graph_name (str): O nome do arquivo de saída para o grafo.
-    """
-    dot = graphviz.Digraph(comment=graph_name, graph_attr={'rankdir': 'LR', 'splines': 'spline'}) # 'splines': 'spline' para arestas curvas
+    dot = graphviz.Digraph(comment=graph_name, graph_attr={'rankdir': 'LR', 'splines': 'spline'})
 
     # Adicionar todos os estados como nós
     for state_name in automaton_data.keys():
@@ -183,11 +175,11 @@ def generate_automaton_graph(automaton_data, graph_name="npc_vendedor_afd"):
             elif state_name == "PROCESSAR_PERSUASAO_POCAO":
                 dot.edge(state_name, "DESCONTO_OFERECIDO_POCAO", label="Ação: Persuasão Sucesso")
                 dot.edge(state_name, "NEGOCIACAO_FALHOU_POCAO", label="Ação: Persuasão Falha")
-            elif state_name == "PROCESSAR_PERSUASAO_ESPADA": # NOVO HANDLER DA ESPADA
+            elif state_name == "PROCESSAR_PERSUASAO_ESPADA":
                 dot.edge(state_name, "DESCONTO_OFERECIDO_ESPADA", label="Ação: Persuasão Sucesso")
                 dot.edge(state_name, "NEGOCIACAO_FALHOU_ESPADA", label="Ação: Persuasão Falha")
             elif state_name in ["PROCESSAR_COMPRA_POCAO_BASE", "PROCESSAR_COMPRA_POCAO_DESCONTO",
-                                "PROCESSAR_COMPRA_ESPADA_BASE", "PROCESSAR_COMPRA_ESPADA_DESCONTO"]: # Incluindo o novo estado
+                                "PROCESSAR_COMPRA_ESPADA_BASE", "PROCESSAR_COMPRA_ESPADA_DESCONTO"]: 
                 dot.edge(state_name, "COMPRA_SUCESSO", label="Ação: Compra Sucesso")
                 dot.edge(state_name, "SEM_OURO", label="Ação: Sem Ouro")
                 dot.edge(state_name, "RECUSANDO_VENDA_ALEATORIA", label="Ação: NPC Recusa Venda")
@@ -205,5 +197,4 @@ def generate_automaton_graph(automaton_data, graph_name="npc_vendedor_afd"):
     output_path = os.path.join(os.getcwd(), graph_name)
     dot.render(output_path, format='png', view=True)
 
-# Chamar a função para gerar o grafo com o autômato atualizado
 generate_automaton_graph(VENDEDOR_NPC_AUTOMATO)
