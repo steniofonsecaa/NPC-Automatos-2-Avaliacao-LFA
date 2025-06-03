@@ -32,10 +32,10 @@ mensagens_customizadas = {
     'ForjandoArma': "Forjando sua arma... isso pode demorar.",
     'MelhorandoArma': "Afiando e reforcando sua arma...",
     'FalhaForja': "A forja falhou! Desculpe.",
-    'SucessoForja': "Aqui esta! Uma arma poderosa forjada especialmente para você.",
+    'SucessoForja': "Aqui esta! Uma arma poderosa forjada especialmente para voce.",
     'NegociandoPreco': "Esse servico nao e barato... pague ou saia.",
     'AceitandoDesafio': "Desafio aceito! Prepare-se para lutar.",
-    'RecusandoServico': "Nao vou trabalhar para alguem como você!",
+    'RecusandoServico': "Nao vou trabalhar para alguem como voce!",
     'Encerrado': "Boa sorte em sua jornada, guerreiro!"
 }
 
