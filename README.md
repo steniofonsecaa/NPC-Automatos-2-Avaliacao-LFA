@@ -6,13 +6,20 @@ Projeto da segunda avaliação da disciplina de Linguagens Formais e Autômatos 
 
 ## Reconhecimentos e Direitos Autorais
 @autor: Emanuel Lopes Silva e Stenio
+
 @contato: emanuelsilva.slz@gmail.com
+
 @data última versão: 10/06/2025
+
 @versão: 1.0
+
 @outros repositórios: https://github.com/EmanuelSilva69/NPC-Automatos-2-Avaliacao-LFA, https://github.com/EmanuelSilva69/Formigueiro-em-Netlogo, https://github.com/EmanuelSilva69/Rede-Neural-Material-Didatico-Inicializacao-de-Pesos
+
 @Agradecimentos: Universidade Federal do Maranhão (UFMA), Professor Doutor
 Thales Levi Azevedo Valente, e colegas de curso.
+
 Copyright/License
+
 Este material é resultado de um trabalho acadêmico para a disciplina
 LINGUAGENS FORMAIS E AUTÔMATOS, sob a orientação do professor Dr.
 THALES LEVI AZEVEDO VALENTE, semestre letivo 2025.1, curso Engenharia
