@@ -1,11 +1,92 @@
+
+
 # NPC-Automatos-2-Avaliacao-LFA
-Projeto da segunda avaliação da disciplina de Linguagens Formais e Autômatos Eng. da Computação - UFMA 2025.1
+
+**Projeto da segunda avaliação da disciplina de Linguagens Formais e Autômatos**
+**Engenharia da Computação – UFMA (2025.1)**
+
+---
+
+## Índice
+
+* [Visão Geral](#visão-geral)
+* [Conteúdo do Repositório](#conteúdo-do-repositório)
+* [Diagrama de Estados (AFD/AFN)](#diagrama-de-estados-afdafn)
+* [Arkanoid Automato](#arkanoid-automato)
+* [Apresentação (Slides)](#apresentação-slides)
+* [Instalação e Uso](#instalação-e-uso)
+* [Estrutura de Pastas](#estrutura-de-pastas)
+* [Autores e Agradecimentos](#autores-e-agradecimentos)
+* [Licença](#licença)
+
+---
+
+## Visão Geral
+
+Este projeto reúne o trabalho da segunda avaliação da disciplina **Linguagens Formais e Autômatos** do curso de Engenharia da Computação da UFMA (2025.1). Nesta etapa, foram modelados e implementados autômatos finitos determinísticos (AFD) e não determinísticos (AFN) para diferentes NPCs (Non-Player Characters) em um cenário de jogo, além de um automato aplicado ao jogo **Arkanoid** e material de apresentação teórica.
+
+## Conteúdo do Repositório
+
+* **NPC/**: Modelos de autômatos para personagens do jogo, incluindo:
+
+  * Vendedor (AFD)
+  * Informante (AFD)/(AP)
+  * Ferreiro (AFD)/(AFN)
+* **Arkanoid/**: Automato que controla a lógica de estados no jogo Arkanoid.
+* **Slide/**: Material de apresentação em formato de slides (PDF/PPT) sobre teoria de autômatos e aplicação prática.
+* **Diagrams (\*.png)**: Imagens dos diagramas de estados para fácil visualização.
+
+## Diagrama de Estados (AFD/AFN)
+
+Em **NPC/** encontram-se os diagramas em PNG que representam as transições de estados para cada personagem:
+
+* **npc\_vendedor\_afd.png**: Fluxo de negociação e vendas.
+* **npc\_informante\_afd.png**: Estados de coleta e passagem de informação.
+* **npc\_ferreiro\_afd.png**: Processo de forjamento e interação com o jogador.
+
+> Para visualizar, abra as imagens em um visualizador de PNG ou incorpore-as em sua apresentação.
+
+## Arkanoid Automato
+
+A pasta **Arkanoid/** contém o diagrama de estados usado para governar:
+
+* Posicionamento da barra
+* Lançamento e rastreamento da bola
+* Colisão com blocos e ativação de power-ups
+
+Utilize esta definição para implementar a lógica de jogo em Python, JavaScript ou qualquer outra linguagem.
+
+## Apresentação (Slides)
+
+Na pasta **Slide/** está o material didático preparado com os seguintes tópicos:
+
+1. Introdução a Autômatos Finito Determinístico (AFD)
+2. Autômatos Finito Não Determinístico (AFN)
+3. Equivalência e Transformações
+4. Aplicações de NPCs em Jogos
+5. Estudo de Caso: Arkanoid
+
+
+## Estrutura de Pastas
+
+```text
+NPC-Automatos-2-Avaliacao-LFA/
+├── NPC/
+│   ├── npc_vendedor_afd.png
+│   ├── npc_informante_afd.png
+│   └── npc_ferreiro_afd.png
+├── Arkanoid/
+│   └── arkanoid_automato.png
+├── Slide/
+│   └── apresentação_autômatos.pdf
+└── README.md
+```
 
 
 
 
 ## Reconhecimentos e Direitos Autorais
-@autor: Emanuel Lopes Silva e Stenio
+@autor: Emanuel Lopes Silva e Stenio Fonseca 
 
 @contato: emanuelsilva.slz@gmail.com
 
